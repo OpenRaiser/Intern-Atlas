@@ -1,0 +1,15 @@
+Title: Attention Is All You Need
+Year: 2017
+Venue: NeurIPS
+Abstract: We introduce the Transformer, a sequence transduction model based entirely on attention mechanisms.
+
+Title: LoRA: Low-Rank Adaptation of Large Language Models
+Year: 2021
+Venue: ICLR
+Abstract: We propose LoRA, a parameter-efficient fine-tuning method using low-rank adaptation matrices.
+
+Title: FlashAttention: Fast and Memory-Efficient Exact Attention with IO-Awareness
+Year: 2022
+Venue: NeurIPS
+Abstract: We propose FlashAttention, an IO-aware exact attention algorithm that improves Transformer attention memory efficiency.
+
