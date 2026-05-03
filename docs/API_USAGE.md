@@ -13,6 +13,15 @@ Start a local server:
 intern-atlas serve --db outputs/local_graph.db --host 127.0.0.1 --port 8000
 ```
 
+Browser UI:
+
+```text
+http://127.0.0.1:8000/
+```
+
+The UI lets you search papers/methods, inspect local evolution edges, open a
+paper neighborhood, and copy graph context for your own LLM workflow.
+
 OpenAPI docs:
 
 ```text
@@ -53,6 +62,12 @@ curl "http://127.0.0.1:8000/api/papers/local_flashattention_xxx"
 
 ```bash
 curl "http://127.0.0.1:8000/api/edges?edge_type=improves&limit=20"
+```
+
+### Search Methods
+
+```bash
+curl "http://127.0.0.1:8000/api/methods?q=Transformer&limit=20"
 ```
 
 ### Neighborhood Subgraph
@@ -122,4 +137,3 @@ client = InternAtlasClient(api_key="YOUR_ATLAS_API_KEY")
 ```
 
 Do not commit API keys. Put them in environment variables or a secret manager.
-

@@ -88,7 +88,11 @@ intern-atlas build \
 intern-atlas serve --db outputs/local_graph.db --host 127.0.0.1 --port 8000
 ```
 
-Then open:
+Then open the local graph workspace:
+
+- `http://127.0.0.1:8000/`
+
+API docs and health checks:
 
 - `http://127.0.0.1:8000/api/docs`
 - `http://127.0.0.1:8000/api/health`
@@ -98,6 +102,7 @@ Example:
 
 ```bash
 curl "http://127.0.0.1:8000/api/papers/search?q=attention"
+curl "http://127.0.0.1:8000/api/methods?q=Transformer"
 curl -X POST "http://127.0.0.1:8000/api/assist/context" \
   -H "Content-Type: application/json" \
   -d '{"query":"efficient attention","max_nodes":80}'
@@ -137,4 +142,3 @@ See [docs/LOCAL_GRAPH_BUILDER.md](docs/LOCAL_GRAPH_BUILDER.md).
 
 Do not commit `.env`, API keys, generated SQLite databases, or PDF corpora.
 The `.gitignore` excludes those by default.
-

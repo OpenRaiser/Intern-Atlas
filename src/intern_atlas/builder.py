@@ -242,6 +242,10 @@ def pair_score(newer: PaperRecord, older: PaperRecord) -> float:
     shared = len(new_methods & old_methods)
     title_overlap = len(tokens(newer.title) & tokens(older.title))
     abstract_overlap = len(tokens(newer.abstract) & tokens(older.abstract))
+    if not shared and title_overlap < 2:
+        # Avoid turning generic abstract overlap such as "efficient" or
+        # "model" into a false methodology edge.
+        return 0.0
     return shared * 4 + title_overlap * 0.8 + min(abstract_overlap, 8) * 0.2
 
 
@@ -323,4 +327,3 @@ def paper_brief(rec: PaperRecord) -> dict[str, Any]:
             for m in rec.methods[:12]
         ],
     }
-

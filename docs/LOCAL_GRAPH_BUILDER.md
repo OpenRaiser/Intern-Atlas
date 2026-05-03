@@ -107,3 +107,11 @@ you need broad literature evidence.
 Heuristic mode is intentionally conservative. Use LLM mode for serious graph
 construction, then inspect `local_graph.json` before relying on the result.
 
+## Inspect In The Browser
+
+```bash
+intern-atlas serve --db outputs/local_graph.db
+```
+
+Open `http://127.0.0.1:8000/`. The local UI is deliberately lightweight: it
+has no Node.js build step and runs from the same FastAPI process as the API.
