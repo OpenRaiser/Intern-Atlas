@@ -74,11 +74,11 @@ Request:
 
 Mode semantics are real, not display-only:
 
-| Mode | Default depth | Typical use |
-| --- | ---: | --- |
-| `light` | `0` | Return directly matching papers and in-set edges with minimal expansion. |
-| `balanced` | `1` | Include one-hop graph neighbors for normal idea generation. |
-| `deep` | `2` | Explore a broader local graph for more exhaustive evidence review. |
+| Mode | Default depth | Maximum depth | Typical use |
+| --- | ---: | ---: | --- |
+| `light` | `0` | `0` | Return directly matching papers and in-set edges with minimal expansion. |
+| `balanced` | `1` | `2` | Include graph neighbors for normal idea generation. |
+| `deep` | `2` | `4` | Explore a broader local graph for more exhaustive evidence review. |
 
 Response fields:
 

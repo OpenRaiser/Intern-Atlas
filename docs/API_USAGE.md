@@ -162,7 +162,7 @@ Parameters:
 | `mode` | string | `balanced` | `light`, `balanced`, or `deep`; controls maximum depth and default scale. |
 | `max_papers` | integer | `20` | Requested paper cap. Effective cap is also bounded by `mode`. |
 | `max_edges` | integer | `40` | Requested edge cap. Effective cap is also bounded by `mode`. |
-| `depth` | integer/null | mode default | Graph expansion depth. `light` caps at 0, `balanced` at 1, `deep` at 2. |
+| `depth` | integer/null | mode default | Graph expansion depth. `light` caps at 0, `balanced` at 2, `deep` at 4. |
 | `year_from` | integer/null | none | Keep papers at or after this year. |
 | `year_to` | integer/null | none | Keep papers at or before this year. |
 | `edge_type` | string/null | none | Keep only a specific evolution edge type. |

@@ -85,6 +85,27 @@ def test_v1_evidence_year_filter(tmp_path):
         assert all(paper["year"] >= 2020 for paper in payload["papers"])
 
 
+def test_v1_evidence_deep_allows_explicit_depth(tmp_path):
+    db_path = build_sample_graph(tmp_path)
+    with TestClient(create_app(db_path)) as client:
+        response = client.post(
+            "/api/v1/evidence/context",
+            json={
+                "query": "efficient attention",
+                "mode": "deep",
+                "depth": 4,
+                "max_papers": 100,
+                "max_edges": 300,
+            },
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["parameters"]["mode"] == "deep"
+        assert payload["parameters"]["depth"] == 4
+        assert payload["parameters"]["max_papers"] == 100
+        assert payload["parameters"]["max_edges"] == 300
+
+
 def test_v1_graph_tools(tmp_path):
     db_path = build_sample_graph(tmp_path)
     with TestClient(create_app(db_path)) as client:
@@ -101,6 +122,9 @@ def test_v1_graph_tools(tmp_path):
         neighborhood = client.get(f"/api/v1/papers/{paper_id}/neighborhood", params={"depth": 1, "limit": 20})
         assert neighborhood.status_code == 200
         assert paper_id in neighborhood.json()["papers"]
+
+        missing = client.get("/api/v1/papers/not-a-real-paper/neighborhood", params={"depth": 1, "limit": 20})
+        assert missing.status_code == 404
 
         tools = client.get("/api/v1/llm/tools").json()
         tool_names = {tool["name"] for tool in tools["tools"]}
@@ -123,6 +147,10 @@ def test_ui_exposes_real_controls(tmp_path):
             'id="downloadPapersBtn"',
             'id="downloadEdgesBtn"',
             'id="downloadContextBtn"',
+            'id="filterBar"',
+            'id="loadingShade"',
+            "function clearWorkspace",
+            "function currentPromptContext",
             'data-mode="light"',
             'data-mode="deep"',
             "/api/v1/evidence/context",
