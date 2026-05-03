@@ -1,0 +1,44 @@
+{
+  "papers": [
+    {
+      "paper_id": "attention_2017",
+      "title": "Attention Is All You Need",
+      "abstract": "We introduce the Transformer, a sequence transduction model based entirely on attention mechanisms.",
+      "year": 2017,
+      "authors": ["Vaswani"],
+      "venue": "NeurIPS"
+    },
+    {
+      "paper_id": "lora_2021",
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "abstract": "LoRA freezes pretrained model weights and injects trainable low-rank adapters for efficient adaptation.",
+      "year": 2021,
+      "authors": ["Hu"],
+      "venue": "ICLR"
+    },
+    {
+      "paper_id": "flashattention_2022",
+      "title": "FlashAttention: Fast and Memory-Efficient Exact Attention",
+      "abstract": "FlashAttention improves Transformer attention by reducing memory reads and writes with tiling and recomputation.",
+      "year": 2022,
+      "authors": ["Dao"],
+      "venue": "NeurIPS"
+    },
+    {
+      "paper_id": "qlora_2023",
+      "title": "QLoRA: Efficient Finetuning of Quantized LLMs",
+      "abstract": "QLoRA combines low-rank adapters with quantization to make large model finetuning memory efficient.",
+      "year": 2023,
+      "authors": ["Dettmers"],
+      "venue": "NeurIPS"
+    },
+    {
+      "paper_id": "longlora_2023",
+      "title": "LongLoRA: Efficient Fine-tuning of Long-Context Large Language Models",
+      "abstract": "LongLoRA adapts LoRA to long-context training with shifted sparse attention and parameter-efficient tuning.",
+      "year": 2023,
+      "authors": ["Chen"],
+      "venue": "ICLR"
+    }
+  ]
+}

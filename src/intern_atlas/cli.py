@@ -37,11 +37,46 @@ def main(argv: list[str] | None = None) -> int:
 
     p_remote = sub.add_parser("remote", help="Call the hosted Intern Atlas API.")
     remote_sub = p_remote.add_subparsers(dest="remote_command", required=True)
-    for name in ("health", "context", "ideas", "eval"):
-        r = remote_sub.add_parser(name)
-        r.add_argument("text", nargs="?", default="")
+
+    def add_remote_common(r: argparse.ArgumentParser) -> None:
         r.add_argument("--base-url", default="https://intern-atlas.opendatalab.org.cn/api")
         r.add_argument("--api-key", default=None)
+
+    r_health = remote_sub.add_parser("health")
+    add_remote_common(r_health)
+
+    r_context = remote_sub.add_parser("context")
+    r_context.add_argument("text")
+    add_remote_common(r_context)
+
+    r_evidence = remote_sub.add_parser("evidence")
+    r_evidence.add_argument("text")
+    r_evidence.add_argument("--max-papers", type=int, default=20)
+    r_evidence.add_argument("--max-edges", type=int, default=40)
+    add_remote_common(r_evidence)
+
+    r_methods = remote_sub.add_parser("methods")
+    r_methods.add_argument("text")
+    r_methods.add_argument("--limit", type=int, default=50)
+    add_remote_common(r_methods)
+
+    r_edges = remote_sub.add_parser("edges")
+    r_edges.add_argument("--paper-id", default=None)
+    r_edges.add_argument("--edge-type", default=None)
+    r_edges.add_argument("--method", default=None)
+    r_edges.add_argument("--limit", type=int, default=100)
+    add_remote_common(r_edges)
+
+    r_paper = remote_sub.add_parser("paper")
+    r_paper.add_argument("paper_id")
+    r_paper.add_argument("--depth", type=int, default=1)
+    r_paper.add_argument("--limit", type=int, default=100)
+    add_remote_common(r_paper)
+
+    for name in ("ideas", "eval"):
+        r = remote_sub.add_parser(name)
+        r.add_argument("text")
+        add_remote_common(r)
         r.add_argument("--use-llm", action="store_true")
 
     args = parser.parse_args(argv)
@@ -85,6 +120,23 @@ def main(argv: list[str] | None = None) -> int:
                 data = client.health()
             elif args.remote_command == "context":
                 data = client.assist_context(args.text)
+            elif args.remote_command == "evidence":
+                data = client.evidence_context(
+                    args.text,
+                    max_papers=args.max_papers,
+                    max_edges=args.max_edges,
+                )
+            elif args.remote_command == "methods":
+                data = client.search_methods(args.text, limit=args.limit)
+            elif args.remote_command == "edges":
+                data = client.evolution_edges(
+                    paper_id=args.paper_id,
+                    edge_type=args.edge_type,
+                    method=args.method,
+                    limit=args.limit,
+                )
+            elif args.remote_command == "paper":
+                data = client.paper_neighborhood(args.paper_id, depth=args.depth, limit=args.limit)
             elif args.remote_command == "ideas":
                 data = client.generate_ideas(args.text, use_llm=args.use_llm)
             elif args.remote_command == "eval":
@@ -101,4 +153,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

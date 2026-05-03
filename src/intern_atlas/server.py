@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from .db import connect, edge_summary, graph_stats, paper_summary
+from .util import tokens
 
 
 def create_app(db_path: str | Path):
@@ -25,6 +26,12 @@ def create_app(db_path: str | Path):
     class QueryRequest(BaseModel):
         query: str = Field(..., min_length=1, max_length=500)
         max_nodes: int = Field(60, ge=1, le=300)
+
+    class EvidenceRequest(BaseModel):
+        query: str = Field(..., min_length=1, max_length=500)
+        max_papers: int = Field(20, ge=1, le=100)
+        max_edges: int = Field(40, ge=0, le=300)
+        include_prompt_context: bool = True
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def index() -> str:
@@ -56,6 +63,9 @@ def create_app(db_path: str | Path):
                 "GET /api/papers/search?q=...",
                 "GET /api/papers/{paper_id}",
                 "GET /api/edges",
+                "POST /api/v1/evidence/context",
+                "GET /api/v1/methods/search?q=...",
+                "GET /api/v1/evolution/edges",
                 "POST /api/query",
                 "POST /api/assist/context",
             ],
@@ -115,28 +125,18 @@ def create_app(db_path: str | Path):
     def list_edges(
         paper_id: str | None = None,
         edge_type: str | None = None,
+        method: str | None = Query(None, max_length=200),
         offset: int = Query(0, ge=0),
         limit: int = Query(100, ge=1, le=1000),
     ) -> list[dict[str, Any]]:
-        clauses = ["fine_edge_type IS NOT NULL", "fine_edge_type != 'background'"]
-        params: list[Any] = []
-        if paper_id:
-            clauses.append("(source_id = ? OR target_id = ?)")
-            params.extend([paper_id, paper_id])
-        if edge_type:
-            clauses.append("fine_edge_type = ?")
-            params.append(edge_type)
-        where = " AND ".join(clauses)
-        rows = conn.execute(
-            f"""
-            SELECT * FROM citations
-            WHERE {where}
-            ORDER BY COALESCE(fine_confidence, 0) DESC
-            LIMIT ? OFFSET ?
-            """,
-            params + [limit, offset],
-        ).fetchall()
-        return [edge_summary(row) for row in rows]
+        return fetch_edges(
+            conn,
+            paper_id=paper_id,
+            edge_type=edge_type,
+            method=method,
+            offset=offset,
+            limit=limit,
+        )
 
     @app.get("/api/methods")
     def list_methods(
@@ -144,22 +144,7 @@ def create_app(db_path: str | Path):
         offset: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=200),
     ) -> list[dict[str, Any]]:
-        params: list[Any] = []
-        where = ""
-        if q.strip():
-            where = "WHERE canonical_name LIKE ? OR description LIKE ?"
-            params.extend([f"%{q}%", f"%{q}%"])
-        rows = conn.execute(
-            f"""
-            SELECT method_id, canonical_name, description, origin_paper_id
-            FROM methods
-            {where}
-            ORDER BY canonical_name
-            LIMIT ? OFFSET ?
-            """,
-            params + [limit, offset],
-        ).fetchall()
-        return [dict(row) for row in rows]
+        return fetch_methods(conn, q=q, offset=offset, limit=limit)
 
     @app.get("/api/papers/{paper_id}/neighborhood")
     def neighborhood(
@@ -172,35 +157,542 @@ def create_app(db_path: str | Path):
 
     @app.post("/api/query")
     def query(req: QueryRequest) -> dict[str, Any]:
-        seed_rows = conn.execute(
-            """
-            SELECT internal_id FROM papers
-            WHERE title LIKE ? OR abstract LIKE ?
-            ORDER BY year DESC, title
-            LIMIT 10
-            """,
-            (f"%{req.query}%", f"%{req.query}%"),
-        ).fetchall()
-        ids: set[str] = set()
-        for row in seed_rows:
-            ids |= bfs_papers(conn, row["internal_id"], depth=1, max_nodes=req.max_nodes)
-            if len(ids) >= req.max_nodes:
-                break
-        return subgraph(conn, set(list(ids)[: req.max_nodes]))
+        ids = collect_relevant_paper_ids(conn, req.query, max_nodes=req.max_nodes, depth=1)
+        return subgraph(conn, set(ids))
+
+    @app.post("/api/v1/query")
+    def v1_query(req: QueryRequest) -> dict[str, Any]:
+        return query(req)
+
+    @app.post("/api/v1/evidence/context")
+    def v1_evidence_context(req: EvidenceRequest) -> dict[str, Any]:
+        return build_evidence_pack(
+            conn,
+            req.query,
+            max_papers=req.max_papers,
+            max_edges=req.max_edges,
+            include_prompt_context=req.include_prompt_context,
+        )
 
     @app.post("/api/assist/context")
     def assist_context(req: QueryRequest) -> dict[str, Any]:
-        sg = query(req)
-        papers = list(sg["papers"].values())[:12]
-        edges = sg["edges"][:20]
+        pack = build_evidence_pack(
+            conn,
+            req.query,
+            max_papers=min(req.max_nodes, 20),
+            max_edges=40,
+            include_prompt_context=True,
+        )
         return {
             "query": req.query,
-            "papers": papers,
-            "evolution_edges": edges,
-            "suggested_prompt_context": prompt_context(req.query, papers, edges),
+            "papers": pack["papers"][:12],
+            "evolution_edges": pack["method_edges"][:20],
+            "suggested_prompt_context": pack["suggested_prompt_context"],
+            "evidence_pack": pack,
         }
 
+    @app.post("/api/v1/assist/context")
+    def v1_assist_context(req: QueryRequest) -> dict[str, Any]:
+        return assist_context(req)
+
+    @app.get("/api/v1/manifest")
+    def v1_manifest() -> dict[str, Any]:
+        data = manifest()
+        data["api_version"] = "v1"
+        data["llm_tool_endpoint"] = "/api/v1/llm/tools"
+        return data
+
+    @app.get("/api/v1/methods/search")
+    def v1_search_methods(
+        q: str = Query("", max_length=200),
+        offset: int = Query(0, ge=0),
+        limit: int = Query(50, ge=1, le=200),
+    ) -> list[dict[str, Any]]:
+        return fetch_methods(conn, q=q, offset=offset, limit=limit)
+
+    @app.get("/api/v1/evolution/edges")
+    def v1_evolution_edges(
+        paper_id: str | None = None,
+        edge_type: str | None = None,
+        method: str | None = Query(None, max_length=200),
+        offset: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=1000),
+    ) -> list[dict[str, Any]]:
+        return fetch_edges(
+            conn,
+            paper_id=paper_id,
+            edge_type=edge_type,
+            method=method,
+            offset=offset,
+            limit=limit,
+        )
+
+    @app.get("/api/v1/papers/{paper_id}/neighborhood")
+    def v1_neighborhood(
+        paper_id: str,
+        depth: int = Query(1, ge=0, le=4),
+        limit: int = Query(100, ge=10, le=300),
+    ) -> dict[str, Any]:
+        return neighborhood(paper_id, depth=depth, limit=limit)
+
+    @app.get("/api/v1/papers/search")
+    def v1_search_papers(
+        q: str = Query("", max_length=200),
+        limit: int = Query(20, ge=1, le=50),
+    ) -> list[dict[str, Any]]:
+        return search_papers(q=q, limit=limit)
+
+    @app.get("/api/v1/llm/tools")
+    def llm_tools() -> dict[str, Any]:
+        return llm_tool_manifest()
+
     return app
+
+
+def fetch_edges(
+    conn,
+    *,
+    paper_id: str | None = None,
+    edge_type: str | None = None,
+    method: str | None = None,
+    offset: int = 0,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    clauses = ["fine_edge_type IS NOT NULL", "fine_edge_type != 'background'"]
+    params: list[Any] = []
+    if paper_id:
+        clauses.append("(source_id = ? OR target_id = ?)")
+        params.extend([paper_id, paper_id])
+    if edge_type:
+        clauses.append("fine_edge_type = ?")
+        params.append(edge_type)
+    if method and method.strip():
+        clauses.append(
+            """
+            (
+              LOWER(source_method) LIKE ? OR LOWER(target_method) LIKE ?
+              OR source_id IN (
+                SELECT pm.paper_id
+                FROM paper_methods pm
+                JOIN methods m ON m.method_id = pm.method_id
+                WHERE LOWER(m.canonical_name) LIKE ?
+              )
+              OR target_id IN (
+                SELECT pm.paper_id
+                FROM paper_methods pm
+                JOIN methods m ON m.method_id = pm.method_id
+                WHERE LOWER(m.canonical_name) LIKE ?
+              )
+            )
+            """
+        )
+        method_like = f"%{method.strip().lower()}%"
+        params.extend([method_like, method_like, method_like, method_like])
+    where = " AND ".join(clauses)
+    rows = conn.execute(
+        f"""
+        SELECT * FROM citations
+        WHERE {where}
+        ORDER BY COALESCE(fine_confidence, 0) DESC
+        LIMIT ? OFFSET ?
+        """,
+        params + [limit, offset],
+    ).fetchall()
+    return [edge_summary(row) for row in rows]
+
+
+def fetch_methods(conn, *, q: str = "", offset: int = 0, limit: int = 50) -> list[dict[str, Any]]:
+    params: list[Any] = []
+    where = ""
+    if q.strip():
+        where = "WHERE canonical_name LIKE ? OR description LIKE ?"
+        params.extend([f"%{q}%", f"%{q}%"])
+    rows = conn.execute(
+        f"""
+        SELECT method_id, canonical_name, description, origin_paper_id
+        FROM methods
+        {where}
+        ORDER BY canonical_name
+        LIMIT ? OFFSET ?
+        """,
+        params + [limit, offset],
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
+def collect_relevant_paper_ids(conn, query: str, *, max_nodes: int, depth: int = 1) -> list[str]:
+    seed_ids = search_relevant_paper_ids(conn, query, limit=max_nodes)
+    return expand_from_seed_papers(conn, seed_ids, max_nodes=max_nodes, depth=depth)
+
+
+def search_relevant_paper_ids(conn, query: str, *, limit: int) -> list[str]:
+    rows = conn.execute("SELECT * FROM papers ORDER BY year DESC, title").fetchall()
+    if not rows:
+        return []
+    paper_ids = [row["internal_id"] for row in rows]
+    method_names = method_names_by_paper(conn, paper_ids)
+    phrase = " ".join(query.lower().split())
+    query_terms = sorted(tokens(query))
+
+    scored: list[tuple[float, int, str, str]] = []
+    for row in rows:
+        paper_id = row["internal_id"]
+        title = (row["title"] or "").lower()
+        abstract = (row["abstract"] or "").lower()
+        methods = " ".join(method_names.get(paper_id, [])).lower()
+        score = 0.0
+        if phrase:
+            if phrase in title:
+                score += 12
+            if phrase in methods:
+                score += 10
+            if phrase in abstract:
+                score += 6
+        for term in query_terms:
+            if term in title:
+                score += 4
+            if term in methods:
+                score += 3
+            if term in abstract:
+                score += 1
+        if score > 0:
+            scored.append((score, row["year"] or 0, row["title"] or "", paper_id))
+
+    scored.sort(key=lambda item: (-item[0], -item[1], item[2]))
+    return [paper_id for _, _, _, paper_id in scored[:limit]]
+
+
+def expand_from_seed_papers(conn, seed_ids: list[str], *, max_nodes: int, depth: int) -> list[str]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+
+    def add(paper_id: str) -> bool:
+        if paper_id in seen or len(ordered) >= max_nodes:
+            return False
+        seen.add(paper_id)
+        ordered.append(paper_id)
+        return True
+
+    for seed_id in seed_ids:
+        if len(ordered) >= max_nodes:
+            break
+        add(seed_id)
+        frontier = deque([(seed_id, 0)])
+        while frontier and len(ordered) < max_nodes:
+            current, current_depth = frontier.popleft()
+            if current_depth >= depth:
+                continue
+            rows = conn.execute(
+                """
+                SELECT source_id AS neighbor, COALESCE(fine_confidence, 0) AS confidence
+                FROM citations
+                WHERE target_id = ?
+                  AND fine_edge_type IS NOT NULL AND fine_edge_type != 'background'
+                UNION ALL
+                SELECT target_id AS neighbor, COALESCE(fine_confidence, 0) AS confidence
+                FROM citations
+                WHERE source_id = ?
+                  AND fine_edge_type IS NOT NULL AND fine_edge_type != 'background'
+                ORDER BY confidence DESC
+                """,
+                (current, current),
+            ).fetchall()
+            for row in rows:
+                neighbor = row["neighbor"]
+                if add(neighbor):
+                    frontier.append((neighbor, current_depth + 1))
+                if len(ordered) >= max_nodes:
+                    break
+    return ordered
+
+
+def build_evidence_pack(
+    conn,
+    query: str,
+    *,
+    max_papers: int,
+    max_edges: int,
+    include_prompt_context: bool,
+) -> dict[str, Any]:
+    seed_ids = search_relevant_paper_ids(conn, query, limit=max_papers)
+    paper_ids = expand_from_seed_papers(conn, seed_ids, max_nodes=max_papers, depth=1)
+    sg = subgraph(conn, set(paper_ids))
+    methods_by_paper = method_mentions_by_paper(conn, paper_ids)
+    seed_set = set(seed_ids)
+
+    papers: list[dict[str, Any]] = []
+    for idx, paper_id in enumerate(paper_ids):
+        paper = sg["papers"].get(paper_id)
+        if not paper:
+            continue
+        item = dict(paper)
+        item["relevance_rank"] = idx + 1
+        item["evidence_role"] = "seed" if paper_id in seed_set else "neighbor"
+        item["methods"] = methods_by_paper.get(paper_id, [])
+        papers.append(item)
+
+    papers_by_id = {paper["paper_id"]: paper for paper in papers}
+    method_edges = enrich_edges(sg["edges"][:max_edges], papers_by_id)
+    bottlenecks = extract_bottlenecks(method_edges)
+    mechanisms = extract_mechanisms(method_edges)
+    timeline = build_timeline(papers)
+    suggested_prompt_context = (
+        evidence_prompt_context(query, timeline, method_edges, bottlenecks, mechanisms)
+        if include_prompt_context
+        else ""
+    )
+
+    return {
+        "query": query,
+        "papers": papers,
+        "method_edges": method_edges,
+        "bottlenecks": bottlenecks,
+        "mechanisms": mechanisms,
+        "timeline": timeline,
+        "suggested_prompt_context": suggested_prompt_context,
+        "counts": {
+            "papers": len(papers),
+            "method_edges": len(method_edges),
+            "bottlenecks": len(bottlenecks),
+            "mechanisms": len(mechanisms),
+        },
+    }
+
+
+def method_names_by_paper(conn, paper_ids: list[str]) -> dict[str, list[str]]:
+    methods = method_mentions_by_paper(conn, paper_ids)
+    return {
+        paper_id: [item["canonical_name"] for item in items]
+        for paper_id, items in methods.items()
+    }
+
+
+def method_mentions_by_paper(conn, paper_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    if not paper_ids:
+        return {}
+    placeholders = ",".join("?" for _ in paper_ids)
+    rows = conn.execute(
+        f"""
+        SELECT pm.paper_id, m.method_id, m.canonical_name, m.description,
+               pm.relationship, pm.confidence
+        FROM paper_methods pm
+        JOIN methods m ON m.method_id = pm.method_id
+        WHERE pm.paper_id IN ({placeholders})
+        ORDER BY pm.confidence DESC, m.canonical_name
+        """,
+        paper_ids,
+    ).fetchall()
+    out: dict[str, list[dict[str, Any]]] = {paper_id: [] for paper_id in paper_ids}
+    for row in rows:
+        out.setdefault(row["paper_id"], []).append(
+            {
+                "method_id": row["method_id"],
+                "canonical_name": row["canonical_name"],
+                "description": row["description"] or "",
+                "relationship": row["relationship"],
+                "confidence": row["confidence"],
+            }
+        )
+    return out
+
+
+def enrich_edges(edges: list[dict[str, Any]], papers_by_id: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for edge in edges:
+        item = dict(edge)
+        newer = papers_by_id.get(edge["source_paper_id"], {})
+        older = papers_by_id.get(edge["target_paper_id"], {})
+        item["newer_paper"] = {
+            "paper_id": edge["source_paper_id"],
+            "title": newer.get("title", ""),
+            "year": newer.get("year"),
+        }
+        item["older_paper"] = {
+            "paper_id": edge["target_paper_id"],
+            "title": older.get("title", ""),
+            "year": older.get("year"),
+        }
+        out.append(item)
+    return out
+
+
+def extract_bottlenecks(edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for edge in edges:
+        text = edge.get("bottleneck", "").strip()
+        if not text:
+            continue
+        key = (edge["source_paper_id"], edge["target_paper_id"], text.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "older_paper_id": edge["target_paper_id"],
+                "newer_paper_id": edge["source_paper_id"],
+                "edge_type": edge["edge_type"],
+                "dimension": edge.get("dimension", ""),
+                "bottleneck": text,
+                "confidence": edge.get("confidence", 0.0),
+            }
+        )
+    return out
+
+
+def extract_mechanisms(edges: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for edge in edges:
+        text = edge.get("mechanism", "").strip()
+        if not text:
+            continue
+        key = (edge["source_paper_id"], edge["target_paper_id"], text.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "older_paper_id": edge["target_paper_id"],
+                "newer_paper_id": edge["source_paper_id"],
+                "edge_type": edge["edge_type"],
+                "source_method": edge.get("source_method", ""),
+                "target_method": edge.get("target_method", ""),
+                "mechanism": text,
+                "confidence": edge.get("confidence", 0.0),
+            }
+        )
+    return out
+
+
+def build_timeline(papers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows = []
+    for paper in papers:
+        rows.append(
+            {
+                "year": paper.get("year"),
+                "paper_id": paper["paper_id"],
+                "title": paper["title"],
+                "evidence_role": paper.get("evidence_role", "neighbor"),
+                "methods": [method["canonical_name"] for method in paper.get("methods", [])[:6]],
+            }
+        )
+    rows.sort(key=lambda item: (item["year"] is None, item["year"] or 9999, item["title"]))
+    return rows
+
+
+def evidence_prompt_context(
+    query: str,
+    timeline: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    bottlenecks: list[dict[str, Any]],
+    mechanisms: list[dict[str, Any]],
+) -> str:
+    lines = [
+        "Use this Intern Atlas evidence pack to support research idea generation.",
+        "Ground claims in the listed paper IDs and avoid inventing papers or results.",
+        f"Research query: {query}",
+        "",
+        "Timeline:",
+    ]
+    for item in timeline[:20]:
+        year = item.get("year") or "unknown"
+        methods = ", ".join(item.get("methods") or []) or "methods not extracted"
+        lines.append(f"- [{year}] {item['title']} ({item['paper_id']}): {methods}")
+
+    lines.extend(["", "Method-evolution edges:"])
+    for edge in edges[:30]:
+        newer = edge.get("newer_paper", {})
+        older = edge.get("older_paper", {})
+        newer_title = newer.get("title") or edge["source_paper_id"]
+        older_title = older.get("title") or edge["target_paper_id"]
+        lines.append(
+            f"- {older_title} -> {newer_title}: {edge['edge_type']}; "
+            f"bottleneck={edge.get('bottleneck', '')}; mechanism={edge.get('mechanism', '')}"
+        )
+
+    lines.extend(["", "Bottlenecks to inspect:"])
+    for item in bottlenecks[:12]:
+        lines.append(f"- {item['dimension'] or 'unknown'}: {item['bottleneck']}")
+
+    lines.extend(["", "Mechanisms to reuse or recombine:"])
+    for item in mechanisms[:12]:
+        lines.append(f"- {item['source_method'] or 'method'}: {item['mechanism']}")
+    return "\n".join(lines)
+
+
+def llm_tool_manifest() -> dict[str, Any]:
+    return {
+        "service": "Intern Atlas Local API",
+        "purpose": "Provide evidence packs and graph lookups for LLM research agents.",
+        "base_path": "/api/v1",
+        "tools": [
+            {
+                "name": "intern_atlas_evidence_context",
+                "method": "POST",
+                "path": "/api/v1/evidence/context",
+                "description": "Return papers, method-evolution edges, bottlenecks, mechanisms, and prompt context for a research query.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Research topic or idea seed."},
+                        "max_papers": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
+                        "max_edges": {"type": "integer", "minimum": 0, "maximum": 300, "default": 40},
+                        "include_prompt_context": {"type": "boolean", "default": True},
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "intern_atlas_search_methods",
+                "method": "GET",
+                "path": "/api/v1/methods/search",
+                "description": "Search extracted method entities by name or description.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "q": {"type": "string"},
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 200, "default": 50},
+                    },
+                    "required": ["q"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "intern_atlas_evolution_edges",
+                "method": "GET",
+                "path": "/api/v1/evolution/edges",
+                "description": "List method-evolution edges, optionally filtered by method, edge type, or paper id.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "paper_id": {"type": "string"},
+                        "edge_type": {"type": "string"},
+                        "method": {"type": "string"},
+                        "limit": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 100},
+                    },
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "intern_atlas_paper_neighborhood",
+                "method": "GET",
+                "path": "/api/v1/papers/{paper_id}/neighborhood",
+                "description": "Return a bounded local subgraph around one paper.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "paper_id": {"type": "string"},
+                        "depth": {"type": "integer", "minimum": 0, "maximum": 4, "default": 1},
+                        "limit": {"type": "integer", "minimum": 10, "maximum": 300, "default": 100},
+                    },
+                    "required": ["paper_id"],
+                    "additionalProperties": False,
+                },
+            },
+        ],
+    }
 
 
 def bfs_papers(conn, start_id: str, *, depth: int, max_nodes: int) -> set[str]:

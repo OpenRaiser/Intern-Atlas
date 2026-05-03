@@ -103,10 +103,23 @@ Example:
 ```bash
 curl "http://127.0.0.1:8000/api/papers/search?q=attention"
 curl "http://127.0.0.1:8000/api/methods?q=Transformer"
+curl -X POST "http://127.0.0.1:8000/api/v1/evidence/context" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"efficient attention","max_papers":20,"max_edges":40}'
 curl -X POST "http://127.0.0.1:8000/api/assist/context" \
   -H "Content-Type: application/json" \
   -d '{"query":"efficient attention","max_nodes":80}'
 ```
+
+For LLM and agent integrations, prefer the versioned API:
+
+- `POST /api/v1/evidence/context`
+- `GET /api/v1/methods/search`
+- `GET /api/v1/evolution/edges`
+- `GET /api/v1/papers/{paper_id}/neighborhood`
+- `GET /api/v1/llm/tools`
+
+See [docs/LLM_TOOL_INTEGRATION.md](docs/LLM_TOOL_INTEGRATION.md).
 
 ## Use The Hosted Intern Atlas API
 
@@ -116,7 +129,13 @@ idea generation, and idea evaluation.
 ```bash
 intern-atlas remote health
 
+intern-atlas remote evidence "efficient long-context attention"
+
 intern-atlas remote context "efficient long-context attention"
+
+intern-atlas remote methods "Transformer"
+
+intern-atlas remote edges --method attention --limit 20
 
 intern-atlas remote ideas "long-context efficient attention" --use-llm
 

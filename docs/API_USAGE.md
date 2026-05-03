@@ -108,6 +108,80 @@ On headless servers, open the URL through SSH port forwarding:
 ssh -L 8000:127.0.0.1:8000 user@server
 ```
 
+## Versioned Agent API
+
+New integrations should prefer `/api/v1/...` endpoints. The older `/api/...`
+endpoints remain available for compatibility.
+
+Core v1 endpoints:
+
+```text
+POST /api/v1/evidence/context
+GET /api/v1/methods/search
+GET /api/v1/evolution/edges
+GET /api/v1/papers/{paper_id}/neighborhood
+GET /api/v1/papers/search
+POST /api/v1/query
+GET /api/v1/llm/tools
+```
+
+The most important endpoint for LLM and agent systems is:
+
+```text
+POST /api/v1/evidence/context
+```
+
+It returns an evidence pack containing papers, method-evolution edges,
+bottlenecks, mechanisms, a timeline, and prompt-ready context.
+
+Request:
+
+```json
+{
+  "query": "efficient long-context attention",
+  "max_papers": 20,
+  "max_edges": 40,
+  "include_prompt_context": true
+}
+```
+
+Response shape:
+
+```json
+{
+  "query": "efficient long-context attention",
+  "papers": [],
+  "method_edges": [],
+  "bottlenecks": [],
+  "mechanisms": [],
+  "timeline": [],
+  "suggested_prompt_context": "Use this Intern Atlas evidence pack...",
+  "counts": {
+    "papers": 0,
+    "method_edges": 0,
+    "bottlenecks": 0,
+    "mechanisms": 0
+  }
+}
+```
+
+Example:
+
+```bash
+curl -X POST "$BASE/v1/evidence/context" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"efficient attention","max_papers":20,"max_edges":40}'
+```
+
+Fetch tool metadata for an LLM application:
+
+```bash
+curl "$BASE/v1/llm/tools"
+```
+
+See [LLM_TOOL_INTEGRATION.md](LLM_TOOL_INTEGRATION.md) for provider-facing
+integration patterns.
+
 ## Health
 
 ```text
@@ -355,6 +429,7 @@ Query parameters:
 | --- | --- | ---: | ---: | --- |
 | `paper_id` | string | none | none | If set, returns edges touching that paper. |
 | `edge_type` | string | none | none | Filter by edge type. |
+| `method` | string | none | 200 chars | Filter by source or target method text. |
 | `offset` | integer | `0` | none | Pagination offset. |
 | `limit` | integer | `100` | `1000` | Number of edges returned. |
 
@@ -373,6 +448,7 @@ Example:
 ```bash
 curl "$BASE/edges?edge_type=extends&limit=20"
 curl "$BASE/edges?paper_id=local_attention_is_all_you_need_6843568f00"
+curl "$BASE/v1/evolution/edges?method=transformer&limit=20"
 ```
 
 Response item:
@@ -602,7 +678,10 @@ The CLI exposes these hosted calls:
 
 ```bash
 intern-atlas remote health
+intern-atlas remote evidence "efficient long-context attention"
 intern-atlas remote context "efficient long-context attention"
+intern-atlas remote methods "Transformer"
+intern-atlas remote edges --method attention --limit 20
 intern-atlas remote ideas "efficient long-context attention" --use-llm
 intern-atlas remote eval "Use FlashAttention and LoRA for efficient ViT tuning."
 ```
@@ -630,6 +709,16 @@ intern-atlas remote ideas \
   --use-llm
 ```
 
+Fetch a v1 evidence pack from a hosted service:
+
+```bash
+intern-atlas remote evidence \
+  "efficient long-context attention" \
+  --max-papers 30 \
+  --max-edges 80 \
+  --api-key "$INTERN_ATLAS_API_KEY"
+```
+
 ## Hosted Python Client
 
 ```python
@@ -639,6 +728,19 @@ client = InternAtlasClient()
 try:
     health = client.health()
     print(health)
+
+    evidence = client.evidence_context(
+        "efficient long-context attention",
+        max_papers=20,
+        max_edges=40,
+    )
+    print(evidence["suggested_prompt_context"])
+
+    methods = client.search_methods("Transformer", limit=20)
+    print(methods)
+
+    edges = client.evolution_edges(method="attention", limit=20)
+    print(edges)
 
     ctx = client.assist_context(
         "efficient long-context attention",
@@ -690,6 +792,65 @@ GET /api/health
 ```
 
 Use it for monitoring and connectivity checks.
+
+### `evidence_context(query, max_papers=20, max_edges=40, include_prompt_context=True)`
+
+Calls:
+
+```text
+POST /api/v1/evidence/context
+```
+
+Arguments:
+
+- `query`: research topic, idea seed, or evaluation target.
+- `max_papers`: maximum relevant papers returned.
+- `max_edges`: maximum methodology edges returned.
+- `include_prompt_context`: whether to include prompt-ready context text.
+
+### `search_methods(q, limit=50, offset=0)`
+
+Calls:
+
+```text
+GET /api/v1/methods/search
+```
+
+Arguments:
+
+- `q`: method name or partial method text.
+- `limit`: maximum methods returned.
+- `offset`: pagination offset.
+
+### `evolution_edges(paper_id=None, edge_type=None, method=None, limit=100, offset=0)`
+
+Calls:
+
+```text
+GET /api/v1/evolution/edges
+```
+
+Arguments:
+
+- `paper_id`: optional paper filter.
+- `edge_type`: optional edge-type filter.
+- `method`: optional source or target method filter.
+- `limit`: maximum edges returned.
+- `offset`: pagination offset.
+
+### `paper_neighborhood(paper_id, depth=1, limit=100)`
+
+Calls:
+
+```text
+GET /api/v1/papers/{paper_id}/neighborhood
+```
+
+Arguments:
+
+- `paper_id`: local paper id.
+- `depth`: graph search depth.
+- `limit`: maximum paper nodes returned.
 
 ### `assist_context(query, budget="balanced", use_mcts=True, token_budget=6000)`
 
