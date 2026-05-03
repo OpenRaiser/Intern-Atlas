@@ -37,17 +37,32 @@ class InternAtlasClient:
         *,
         max_papers: int = 20,
         max_edges: int = 40,
+        mode: str = "balanced",
+        depth: int | None = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
+        edge_type: str | None = None,
+        method: str | None = None,
         include_prompt_context: bool = True,
     ) -> dict[str, Any]:
-        return self._post(
-            "/v1/evidence/context",
-            {
-                "query": query,
-                "max_papers": max_papers,
-                "max_edges": max_edges,
-                "include_prompt_context": include_prompt_context,
-            },
-        )
+        payload: dict[str, Any] = {
+            "query": query,
+            "max_papers": max_papers,
+            "max_edges": max_edges,
+            "mode": mode,
+            "include_prompt_context": include_prompt_context,
+        }
+        if depth is not None:
+            payload["depth"] = depth
+        if year_from is not None:
+            payload["year_from"] = year_from
+        if year_to is not None:
+            payload["year_to"] = year_to
+        if edge_type:
+            payload["edge_type"] = edge_type
+        if method:
+            payload["method"] = method
+        return self._post("/v1/evidence/context", payload)
 
     def search_methods(self, q: str, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         return self._get(
@@ -61,6 +76,8 @@ class InternAtlasClient:
         paper_id: str | None = None,
         edge_type: str | None = None,
         method: str | None = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
@@ -71,6 +88,10 @@ class InternAtlasClient:
             params["edge_type"] = edge_type
         if method:
             params["method"] = method
+        if year_from is not None:
+            params["year_from"] = str(year_from)
+        if year_to is not None:
+            params["year_to"] = str(year_to)
         return self._get("/v1/evolution/edges", params=params)  # type: ignore[return-value]
 
     def paper_neighborhood(self, paper_id: str, *, depth: int = 1, limit: int = 100) -> dict[str, Any]:

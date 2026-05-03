@@ -43,15 +43,46 @@ def test_v1_evidence_context(tmp_path):
     with TestClient(create_app(db_path)) as client:
         response = client.post(
             "/api/v1/evidence/context",
-            json={"query": "efficient attention", "max_papers": 10, "max_edges": 20},
+            json={
+                "query": "efficient attention",
+                "mode": "deep",
+                "max_papers": 10,
+                "max_edges": 20,
+                "depth": 2,
+                "method": "attention",
+            },
         )
         assert response.status_code == 200
         payload = response.json()
         assert payload["query"] == "efficient attention"
+        assert payload["parameters"]["mode"] == "deep"
+        assert payload["parameters"]["depth"] == 2
+        assert payload["parameters"]["method"] == "attention"
         assert payload["counts"]["papers"] >= 2
         assert payload["counts"]["method_edges"] >= 1
         assert payload["timeline"]
         assert "Research query: efficient attention" in payload["suggested_prompt_context"]
+
+
+def test_v1_evidence_year_filter(tmp_path):
+    db_path = build_sample_graph(tmp_path)
+    with TestClient(create_app(db_path)) as client:
+        response = client.post(
+            "/api/v1/evidence/context",
+            json={
+                "query": "efficient attention",
+                "mode": "light",
+                "year_from": 2020,
+                "year_to": 2023,
+                "max_papers": 12,
+                "max_edges": 18,
+            },
+        )
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["parameters"]["mode"] == "light"
+        assert payload["parameters"]["depth"] == 0
+        assert all(paper["year"] >= 2020 for paper in payload["papers"])
 
 
 def test_v1_graph_tools(tmp_path):
@@ -75,3 +106,25 @@ def test_v1_graph_tools(tmp_path):
         tool_names = {tool["name"] for tool in tools["tools"]}
         assert "intern_atlas_evidence_context" in tool_names
         assert "intern_atlas_evolution_edges" in tool_names
+        evidence_tool = next(tool for tool in tools["tools"] if tool["name"] == "intern_atlas_evidence_context")
+        assert "mode" in evidence_tool["input_schema"]["properties"]
+        assert "year_from" in evidence_tool["input_schema"]["properties"]
+
+
+def test_ui_exposes_real_controls(tmp_path):
+    db_path = build_sample_graph(tmp_path)
+    with TestClient(create_app(db_path)) as client:
+        html = client.get("/").text
+        for marker in (
+            'id="yearFrom"',
+            'id="yearTo"',
+            'id="methodFilter"',
+            'id="downloadJsonBtn"',
+            'id="downloadPapersBtn"',
+            'id="downloadEdgesBtn"',
+            'id="downloadContextBtn"',
+            'data-mode="light"',
+            'data-mode="deep"',
+            "/api/v1/evidence/context",
+        ):
+            assert marker in html

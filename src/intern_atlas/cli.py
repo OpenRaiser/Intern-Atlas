@@ -53,6 +53,12 @@ def main(argv: list[str] | None = None) -> int:
     r_evidence.add_argument("text")
     r_evidence.add_argument("--max-papers", type=int, default=20)
     r_evidence.add_argument("--max-edges", type=int, default=40)
+    r_evidence.add_argument("--mode", choices=["light", "balanced", "deep"], default="balanced")
+    r_evidence.add_argument("--depth", type=int, default=None)
+    r_evidence.add_argument("--year-from", type=int, default=None)
+    r_evidence.add_argument("--year-to", type=int, default=None)
+    r_evidence.add_argument("--edge-type", default=None)
+    r_evidence.add_argument("--method", default=None)
     add_remote_common(r_evidence)
 
     r_methods = remote_sub.add_parser("methods")
@@ -64,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     r_edges.add_argument("--paper-id", default=None)
     r_edges.add_argument("--edge-type", default=None)
     r_edges.add_argument("--method", default=None)
+    r_edges.add_argument("--year-from", type=int, default=None)
+    r_edges.add_argument("--year-to", type=int, default=None)
     r_edges.add_argument("--limit", type=int, default=100)
     add_remote_common(r_edges)
 
@@ -125,6 +133,12 @@ def main(argv: list[str] | None = None) -> int:
                     args.text,
                     max_papers=args.max_papers,
                     max_edges=args.max_edges,
+                    mode=args.mode,
+                    depth=args.depth,
+                    year_from=args.year_from,
+                    year_to=args.year_to,
+                    edge_type=args.edge_type,
+                    method=args.method,
                 )
             elif args.remote_command == "methods":
                 data = client.search_methods(args.text, limit=args.limit)
@@ -133,6 +147,8 @@ def main(argv: list[str] | None = None) -> int:
                     paper_id=args.paper_id,
                     edge_type=args.edge_type,
                     method=args.method,
+                    year_from=args.year_from,
+                    year_to=args.year_to,
                     limit=args.limit,
                 )
             elif args.remote_command == "paper":

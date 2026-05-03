@@ -60,11 +60,25 @@ Request:
 ```json
 {
   "query": "efficient long-context attention",
+  "mode": "balanced",
   "max_papers": 20,
   "max_edges": 40,
+  "depth": 1,
+  "year_from": 2020,
+  "year_to": 2026,
+  "edge_type": "extends",
+  "method": "attention",
   "include_prompt_context": true
 }
 ```
+
+Mode semantics are real, not display-only:
+
+| Mode | Default depth | Typical use |
+| --- | ---: | --- |
+| `light` | `0` | Return directly matching papers and in-set edges with minimal expansion. |
+| `balanced` | `1` | Include one-hop graph neighbors for normal idea generation. |
+| `deep` | `2` | Explore a broader local graph for more exhaustive evidence review. |
 
 Response fields:
 
@@ -149,6 +163,32 @@ This schema is provider-neutral. Adapt field names to the SDK you use.
         "maximum": 300,
         "default": 40
       },
+      "mode": {
+        "type": "string",
+        "enum": ["light", "balanced", "deep"],
+        "default": "balanced"
+      },
+      "depth": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4
+      },
+      "year_from": {
+        "type": "integer",
+        "minimum": 1900,
+        "maximum": 2100
+      },
+      "year_to": {
+        "type": "integer",
+        "minimum": 1900,
+        "maximum": 2100
+      },
+      "edge_type": {
+        "type": "string"
+      },
+      "method": {
+        "type": "string"
+      },
       "include_prompt_context": {
         "type": "boolean",
         "default": true
@@ -175,16 +215,34 @@ def intern_atlas_evidence_context(
     query: str,
     max_papers: int = 20,
     max_edges: int = 40,
+    mode: str = "balanced",
+    depth: int | None = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
+    edge_type: str | None = None,
+    method: str | None = None,
     include_prompt_context: bool = True,
 ) -> dict:
+    payload = {
+        "query": query,
+        "max_papers": max_papers,
+        "max_edges": max_edges,
+        "mode": mode,
+        "include_prompt_context": include_prompt_context,
+    }
+    if depth is not None:
+        payload["depth"] = depth
+    if year_from is not None:
+        payload["year_from"] = year_from
+    if year_to is not None:
+        payload["year_to"] = year_to
+    if edge_type:
+        payload["edge_type"] = edge_type
+    if method:
+        payload["method"] = method
     response = requests.post(
         f"{BASE_URL}/evidence/context",
-        json={
-            "query": query,
-            "max_papers": max_papers,
-            "max_edges": max_edges,
-            "include_prompt_context": include_prompt_context,
-        },
+        json=payload,
         timeout=60,
     )
     response.raise_for_status()

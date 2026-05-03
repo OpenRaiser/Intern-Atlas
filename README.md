@@ -105,7 +105,7 @@ curl "http://127.0.0.1:8000/api/papers/search?q=attention"
 curl "http://127.0.0.1:8000/api/methods?q=Transformer"
 curl -X POST "http://127.0.0.1:8000/api/v1/evidence/context" \
   -H "Content-Type: application/json" \
-  -d '{"query":"efficient attention","max_papers":20,"max_edges":40}'
+  -d '{"query":"efficient attention","mode":"deep","year_from":2020,"max_papers":40,"max_edges":80}'
 curl -X POST "http://127.0.0.1:8000/api/assist/context" \
   -H "Content-Type: application/json" \
   -d '{"query":"efficient attention","max_nodes":80}'
@@ -120,6 +120,11 @@ For LLM and agent integrations, prefer the versioned API:
 - `GET /api/v1/llm/tools`
 
 See [docs/LLM_TOOL_INTEGRATION.md](docs/LLM_TOOL_INTEGRATION.md).
+
+The browser workspace exposes the same evidence parameters: retrieval mode,
+year range, edge type, method filter, graph depth, paper cap, and edge cap. It
+also downloads the current evidence view as JSON, paper CSV, edge CSV, or
+Markdown prompt context.
 
 ## Use The Hosted Intern Atlas API
 

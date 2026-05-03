@@ -90,11 +90,14 @@ Browser workspace for the local graph.
 Features:
 
 - shows graph statistics;
-- searches papers or methods;
-- opens a local paper neighborhood;
-- renders a compact SVG graph;
-- lists bottlenecks and mechanisms;
-- calls `/api/assist/context` and copies prompt context when clipboard permission is available.
+- builds `/api/v1/evidence/context` evidence packs from a research query;
+- provides real `light`, `balanced`, and `deep` retrieval modes;
+- filters by year range, edge type, method text, node count, edge count, and graph depth;
+- opens a local paper neighborhood for a selected paper;
+- renders a timeline-style SVG graph;
+- lists papers, method edges, bottlenecks, mechanisms, and timeline entries;
+- downloads the current evidence view as JSON, paper CSV, edge CSV, or Markdown prompt context;
+- copies prompt context when clipboard permission is available.
 
 Example:
 
@@ -139,11 +142,32 @@ Request:
 ```json
 {
   "query": "efficient long-context attention",
+  "mode": "balanced",
   "max_papers": 20,
   "max_edges": 40,
+  "depth": 1,
+  "year_from": 2020,
+  "year_to": 2026,
+  "edge_type": "extends",
+  "method": "attention",
   "include_prompt_context": true
 }
 ```
+
+Parameters:
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `query` | string | required | Research topic, idea seed, or evaluation target. |
+| `mode` | string | `balanced` | `light`, `balanced`, or `deep`; controls maximum depth and default scale. |
+| `max_papers` | integer | `20` | Requested paper cap. Effective cap is also bounded by `mode`. |
+| `max_edges` | integer | `40` | Requested edge cap. Effective cap is also bounded by `mode`. |
+| `depth` | integer/null | mode default | Graph expansion depth. `light` caps at 0, `balanced` at 1, `deep` at 2. |
+| `year_from` | integer/null | none | Keep papers at or after this year. |
+| `year_to` | integer/null | none | Keep papers at or before this year. |
+| `edge_type` | string/null | none | Keep only a specific evolution edge type. |
+| `method` | string/null | none | Keep edges associated with a source, target, or paper method. |
+| `include_prompt_context` | boolean | `true` | Include prompt-ready Markdown-like context. |
 
 Response shape:
 
@@ -161,6 +185,16 @@ Response shape:
     "method_edges": 0,
     "bottlenecks": 0,
     "mechanisms": 0
+  },
+  "parameters": {
+    "mode": "balanced",
+    "depth": 1,
+    "max_papers": 20,
+    "max_edges": 40,
+    "year_from": 2020,
+    "year_to": 2026,
+    "edge_type": "extends",
+    "method": "attention"
   }
 }
 ```
@@ -793,7 +827,7 @@ GET /api/health
 
 Use it for monitoring and connectivity checks.
 
-### `evidence_context(query, max_papers=20, max_edges=40, include_prompt_context=True)`
+### `evidence_context(query, max_papers=20, max_edges=40, mode="balanced", depth=None, year_from=None, year_to=None, edge_type=None, method=None, include_prompt_context=True)`
 
 Calls:
 
@@ -806,6 +840,12 @@ Arguments:
 - `query`: research topic, idea seed, or evaluation target.
 - `max_papers`: maximum relevant papers returned.
 - `max_edges`: maximum methodology edges returned.
+- `mode`: `light`, `balanced`, or `deep`.
+- `depth`: optional graph expansion depth, bounded by the selected mode.
+- `year_from`: optional lower year bound.
+- `year_to`: optional upper year bound.
+- `edge_type`: optional edge type filter.
+- `method`: optional method text filter.
 - `include_prompt_context`: whether to include prompt-ready context text.
 
 ### `search_methods(q, limit=50, offset=0)`
@@ -822,7 +862,7 @@ Arguments:
 - `limit`: maximum methods returned.
 - `offset`: pagination offset.
 
-### `evolution_edges(paper_id=None, edge_type=None, method=None, limit=100, offset=0)`
+### `evolution_edges(paper_id=None, edge_type=None, method=None, year_from=None, year_to=None, limit=100, offset=0)`
 
 Calls:
 
@@ -835,6 +875,8 @@ Arguments:
 - `paper_id`: optional paper filter.
 - `edge_type`: optional edge-type filter.
 - `method`: optional source or target method filter.
+- `year_from`: optional lower year bound for both edge endpoints.
+- `year_to`: optional upper year bound for both edge endpoints.
 - `limit`: maximum edges returned.
 - `offset`: pagination offset.
 
