@@ -60,6 +60,10 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
 ```
 
 The browser workspace uses the same proxy when `Hosted API` is selected.
+The hosted base URL can be either the website root
+`https://intern-atlas.opendatalab.org.cn/` or the API root
+`https://intern-atlas.opendatalab.org.cn/api`; the client normalizes the site
+root to `/api`.
 
 ## Core Tool
 

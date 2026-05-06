@@ -161,6 +161,13 @@ export INTERN_ATLAS_REMOTE_BASE_URL="https://your-host.example.com/api"
 export INTERN_ATLAS_API_KEY="YOUR_ATLAS_API_KEY"
 ```
 
+You can also use the public site root as the base URL; the client normalizes it
+to the API root automatically:
+
+```bash
+export INTERN_ATLAS_REMOTE_BASE_URL="https://intern-atlas.opendatalab.org.cn/"
+```
+
 If the public demo endpoint returns an upstream error, use your own deployed
 base URL with the environment variable above or `--base-url`.
 
@@ -169,7 +176,20 @@ The local server also exposes hosted proxy endpoints:
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
   -H "Content-Type: application/json" \
-  -d '{"query":"efficient attention","mode":"deep"}'
+  -d '{"query":"efficient attention","mode":"deep","base_url":"https://intern-atlas.opendatalab.org.cn/"}'
+```
+
+For direct website graph data from a customer laptop:
+
+```bash
+intern-atlas remote search "FlashAttention" --include-subgraph \
+  --base-url "https://intern-atlas.opendatalab.org.cn/"
+
+intern-atlas remote query "efficient attention" --max-nodes 80 \
+  --base-url "https://intern-atlas.opendatalab.org.cn/"
+
+intern-atlas remote chain "attention" --max-chains 5 \
+  --base-url "https://intern-atlas.opendatalab.org.cn/"
 ```
 
 See [docs/API_USAGE.md](docs/API_USAGE.md) for endpoint details and Python

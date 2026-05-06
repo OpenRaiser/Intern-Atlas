@@ -52,6 +52,21 @@ def main(argv: list[str] | None = None) -> int:
     r_health = remote_sub.add_parser("health")
     add_remote_common(r_health)
 
+    r_stats = remote_sub.add_parser("stats")
+    add_remote_common(r_stats)
+
+    r_search = remote_sub.add_parser("search")
+    r_search.add_argument("text")
+    r_search.add_argument("--type", choices=["auto", "keyword", "title", "direction", "paper_id"], default="auto")
+    r_search.add_argument("--limit", type=int, default=20)
+    r_search.add_argument("--include-subgraph", action="store_true")
+    add_remote_common(r_search)
+
+    r_query = remote_sub.add_parser("query")
+    r_query.add_argument("text")
+    r_query.add_argument("--max-nodes", type=int, default=30)
+    add_remote_common(r_query)
+
     r_context = remote_sub.add_parser("context")
     r_context.add_argument("text")
     add_remote_common(r_context)
@@ -87,6 +102,32 @@ def main(argv: list[str] | None = None) -> int:
     r_paper.add_argument("--depth", type=int, default=1)
     r_paper.add_argument("--limit", type=int, default=100)
     add_remote_common(r_paper)
+
+    r_detail = remote_sub.add_parser("paper-detail")
+    r_detail.add_argument("paper_id")
+    add_remote_common(r_detail)
+
+    for name in ("neighborhood", "branch", "ancestry"):
+        r = remote_sub.add_parser(name)
+        r.add_argument("paper_id")
+        r.add_argument("--depth", type=int, default=1 if name == "neighborhood" else 2)
+        r.add_argument("--limit", type=int, default=100)
+        add_remote_common(r)
+
+    r_path = remote_sub.add_parser("path")
+    r_path.add_argument("from_id")
+    r_path.add_argument("to_id")
+    r_path.add_argument("--direction", choices=["evolution", "ancestry", "both"], default="evolution")
+    r_path.add_argument("--max-depth", type=int, default=10)
+    add_remote_common(r_path)
+
+    r_chain = remote_sub.add_parser("chain")
+    r_chain.add_argument("domain")
+    r_chain.add_argument("--max-chains", type=int, default=5)
+    r_chain.add_argument("--max-depth", type=int, default=8)
+    r_chain.add_argument("--beam-width", type=int, default=3)
+    r_chain.add_argument("--strategy", choices=["mcts", "beam"], default="mcts")
+    add_remote_common(r_chain)
 
     for name in ("ideas", "eval"):
         r = remote_sub.add_parser(name)
@@ -134,6 +175,17 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 if args.remote_command == "health":
                     data = client.health()
+                elif args.remote_command == "stats":
+                    data = client.stats()
+                elif args.remote_command == "search":
+                    data = client.unified_search(
+                        args.text,
+                        search_type=args.type,
+                        limit=args.limit,
+                        include_subgraph=args.include_subgraph,
+                    )
+                elif args.remote_command == "query":
+                    data = client.query_subgraph(args.text, max_nodes=args.max_nodes)
                 elif args.remote_command == "context":
                     data = client.assist_context(args.text)
                 elif args.remote_command == "evidence":
@@ -161,6 +213,29 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 elif args.remote_command == "paper":
                     data = client.paper_neighborhood(args.paper_id, depth=args.depth, limit=args.limit)
+                elif args.remote_command == "paper-detail":
+                    data = client.get_paper(args.paper_id)
+                elif args.remote_command == "neighborhood":
+                    data = client.paper_neighborhood(args.paper_id, depth=args.depth, limit=args.limit)
+                elif args.remote_command == "branch":
+                    data = client.paper_branch(args.paper_id, depth=args.depth, limit=args.limit)
+                elif args.remote_command == "ancestry":
+                    data = client.paper_ancestry(args.paper_id, depth=args.depth, limit=args.limit)
+                elif args.remote_command == "path":
+                    data = client.find_path(
+                        args.from_id,
+                        args.to_id,
+                        direction=args.direction,
+                        max_depth=args.max_depth,
+                    )
+                elif args.remote_command == "chain":
+                    data = client.evolution_chain(
+                        args.domain,
+                        max_chains=args.max_chains,
+                        max_depth=args.max_depth,
+                        beam_width=args.beam_width,
+                        strategy=args.strategy,
+                    )
                 elif args.remote_command == "ideas":
                     data = client.generate_ideas(args.text, use_llm=args.use_llm)
                 elif args.remote_command == "eval":

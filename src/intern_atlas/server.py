@@ -78,6 +78,39 @@ def create_app(db_path: str | Path):
         depth: int = Field(1, ge=0, le=4)
         limit: int = Field(100, ge=10, le=300)
 
+    class RemotePaperListRequest(RemoteConfigRequest):
+        status: str | None = Field(None, max_length=20)
+        tier: str | None = Field(None, max_length=20)
+        paper_type: str | None = Field(None, max_length=50)
+        offset: int = Field(0, ge=0)
+        limit: int = Field(50, ge=1, le=200)
+
+    class RemotePaperDetailRequest(RemoteConfigRequest):
+        paper_id: str = Field(..., min_length=1, max_length=200)
+
+    class RemoteSearchRequest(RemoteConfigRequest):
+        query: str = Field(..., min_length=1, max_length=500)
+        search_type: str = Field("auto", pattern="^(auto|keyword|title|direction|paper_id)$")
+        limit: int = Field(20, ge=1, le=100)
+        include_subgraph: bool = False
+
+    class RemoteQueryRequest(RemoteConfigRequest):
+        query: str = Field(..., min_length=1, max_length=500)
+        max_nodes: int = Field(30, ge=1, le=300)
+
+    class RemotePathRequest(RemoteConfigRequest):
+        from_id: str = Field(..., min_length=1, max_length=200)
+        to_id: str = Field(..., min_length=1, max_length=200)
+        direction: str = Field("evolution", pattern="^(evolution|ancestry|both)$")
+        max_depth: int = Field(10, ge=1, le=12)
+
+    class RemoteChainRequest(RemoteConfigRequest):
+        domain: str = Field(..., min_length=1, max_length=200)
+        max_chains: int = Field(5, ge=1, le=10)
+        max_depth: int = Field(8, ge=2, le=15)
+        beam_width: int = Field(3, ge=1, le=8)
+        strategy: str = Field("mcts", pattern="^(mcts|beam)$")
+
     class RemoteAssistRequest(RemoteConfigRequest):
         query: str = Field(..., min_length=1, max_length=500)
         budget: str = Field("balanced", pattern="^(light|balanced|deep)$")
@@ -148,8 +181,14 @@ def create_app(db_path: str | Path):
                 "GET /api/v1/methods/search?q=...",
                 "GET /api/v1/evolution/edges",
                 "POST /api/v1/remote/health",
+                "POST /api/v1/remote/search",
+                "POST /api/v1/remote/query",
                 "POST /api/v1/remote/evidence/context",
+                "POST /api/v1/remote/papers",
+                "POST /api/v1/remote/papers/detail",
                 "POST /api/v1/remote/papers/neighborhood",
+                "POST /api/v1/remote/path",
+                "POST /api/v1/remote/visualization/evolution-chain",
                 "POST /api/query",
                 "POST /api/assist/context",
             ],
@@ -356,6 +395,49 @@ def create_app(db_path: str | Path):
     def remote_health(req: RemoteConfigRequest) -> dict[str, Any]:
         return mark_remote(call_remote(req, lambda client: client.health()))
 
+    @app.post("/api/v1/remote/stats")
+    def remote_stats(req: RemoteConfigRequest) -> dict[str, Any]:
+        return mark_remote(call_remote(req, lambda client: client.stats()))
+
+    @app.post("/api/v1/remote/papers")
+    def remote_list_papers(req: RemotePaperListRequest) -> list[dict[str, Any]]:
+        return call_remote(
+            req,
+            lambda client: client.list_papers(
+                status=req.status,
+                tier=req.tier,
+                paper_type=req.paper_type,
+                offset=req.offset,
+                limit=req.limit,
+            ),
+        )
+
+    @app.post("/api/v1/remote/papers/search")
+    def remote_search_papers(req: RemoteSearchRequest) -> list[dict[str, Any]]:
+        return call_remote(req, lambda client: client.search_papers(req.query, limit=req.limit))
+
+    @app.post("/api/v1/remote/papers/detail")
+    def remote_paper_detail(req: RemotePaperDetailRequest) -> dict[str, Any]:
+        return mark_remote(call_remote(req, lambda client: client.get_paper(req.paper_id)))
+
+    @app.post("/api/v1/remote/search")
+    def remote_search(req: RemoteSearchRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.unified_search(
+                    req.query,
+                    search_type=req.search_type,
+                    limit=req.limit,
+                    include_subgraph=req.include_subgraph,
+                ),
+            )
+        )
+
+    @app.post("/api/v1/remote/query")
+    def remote_query(req: RemoteQueryRequest) -> dict[str, Any]:
+        return mark_remote(call_remote(req, lambda client: client.query_subgraph(req.query, max_nodes=req.max_nodes)))
+
     @app.post("/api/v1/remote/evidence/context")
     def remote_evidence_context(req: RemoteEvidenceRequest) -> dict[str, Any]:
         return mark_remote(
@@ -382,6 +464,51 @@ def create_app(db_path: str | Path):
             call_remote(
                 req,
                 lambda client: client.paper_neighborhood(req.paper_id, depth=req.depth, limit=req.limit),
+            )
+        )
+
+    @app.post("/api/v1/remote/papers/branch")
+    def remote_paper_branch(req: RemoteNeighborhoodRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.paper_branch(req.paper_id, depth=req.depth, limit=req.limit),
+            )
+        )
+
+    @app.post("/api/v1/remote/papers/ancestry")
+    def remote_paper_ancestry(req: RemoteNeighborhoodRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.paper_ancestry(req.paper_id, depth=req.depth, limit=req.limit),
+            )
+        )
+
+    @app.post("/api/v1/remote/path")
+    def remote_path(req: RemotePathRequest) -> list[dict[str, Any]]:
+        return call_remote(
+            req,
+            lambda client: client.find_path(
+                req.from_id,
+                req.to_id,
+                direction=req.direction,
+                max_depth=req.max_depth,
+            ),
+        )
+
+    @app.post("/api/v1/remote/visualization/evolution-chain")
+    def remote_evolution_chain(req: RemoteChainRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.evolution_chain(
+                    req.domain,
+                    max_chains=req.max_chains,
+                    max_depth=req.max_depth,
+                    beam_width=req.beam_width,
+                    strategy=req.strategy,
+                ),
             )
         )
 

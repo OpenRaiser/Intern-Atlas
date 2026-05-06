@@ -549,7 +549,7 @@ INDEX_HTML = r"""<!doctype html>
         <div id="remoteSettings" class="remote-settings">
           <div>
             <label for="remoteBaseUrl">Hosted base URL</label>
-            <input id="remoteBaseUrl" placeholder="https://intern-atlas.opendatalab.org.cn/api" />
+            <input id="remoteBaseUrl" placeholder="https://intern-atlas.opendatalab.org.cn/" />
           </div>
           <div>
             <label for="remoteApiKey">Hosted API key</label>

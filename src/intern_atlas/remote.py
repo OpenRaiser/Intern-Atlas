@@ -4,11 +4,24 @@ from __future__ import annotations
 
 import os
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
 
 DEFAULT_HOSTED_BASE_URL = "https://intern-atlas.opendatalab.org.cn/api"
+
+
+def normalize_hosted_base_url(base_url: str) -> str:
+    """Accept either the website root or the API root."""
+    cleaned = base_url.strip().rstrip("/")
+    parts = urlsplit(cleaned)
+    if not parts.scheme or not parts.netloc:
+        return cleaned
+    path = parts.path.rstrip("/")
+    if path in {"", "/"}:
+        path = "/api"
+    return urlunsplit((parts.scheme, parts.netloc, path, "", ""))
 
 
 class InternAtlasClient:
@@ -20,7 +33,7 @@ class InternAtlasClient:
         timeout_seconds: float = 120.0,
     ) -> None:
         configured_base_url = base_url or os.getenv("INTERN_ATLAS_REMOTE_BASE_URL") or DEFAULT_HOSTED_BASE_URL
-        self.base_url = configured_base_url.rstrip("/")
+        self.base_url = normalize_hosted_base_url(configured_base_url)
         self.api_key = api_key or os.getenv("INTERN_ATLAS_API_KEY") or os.getenv("INTERN_ATLAS_REMOTE_API_KEY")
         self._client = httpx.Client(timeout=timeout_seconds)
 
@@ -35,6 +48,57 @@ class InternAtlasClient:
 
     def health(self) -> dict[str, Any]:
         return self._get("/health")
+
+    def manifest(self) -> dict[str, Any]:
+        return self._get("")  # type: ignore[return-value]
+
+    def stats(self) -> dict[str, Any]:
+        return self._get("/stats")  # type: ignore[return-value]
+
+    def list_papers(
+        self,
+        *,
+        status: str | None = None,
+        tier: str | None = None,
+        paper_type: str | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        params = {"offset": str(offset), "limit": str(limit)}
+        if status:
+            params["status"] = status
+        if tier:
+            params["tier"] = tier
+        if paper_type:
+            params["type"] = paper_type
+        return self._get("/papers", params=params)  # type: ignore[return-value]
+
+    def search_papers(self, q: str, *, limit: int = 30) -> list[dict[str, Any]]:
+        return self._get("/papers/search", params={"q": q, "limit": str(limit)})  # type: ignore[return-value]
+
+    def get_paper(self, paper_id: str) -> dict[str, Any]:
+        return self._get(f"/papers/{paper_id}")  # type: ignore[return-value]
+
+    def unified_search(
+        self,
+        query: str,
+        *,
+        search_type: str = "auto",
+        limit: int = 20,
+        include_subgraph: bool = False,
+    ) -> dict[str, Any]:
+        return self._post(
+            "/search",
+            {
+                "query": query,
+                "type": search_type,
+                "limit": limit,
+                "include_subgraph": include_subgraph,
+            },
+        )
+
+    def query_subgraph(self, query: str, *, max_nodes: int = 30) -> dict[str, Any]:
+        return self._post("/query", {"query": query, "max_nodes": max_nodes})
 
     def evidence_context(
         self,
@@ -67,11 +131,23 @@ class InternAtlasClient:
             payload["edge_type"] = edge_type
         if method:
             payload["method"] = method
-        return self._post("/v1/evidence/context", payload)
+        try:
+            return self._post("/v1/evidence/context", payload)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in {404, 405}:
+                raise
+        return self.assist_context(
+            query,
+            budget=mode,
+            use_mcts=True,
+            token_budget=6000,
+            max_seeds=min(max_papers, 30),
+            max_edges=min(max_edges, 200),
+        )
 
     def search_methods(self, q: str, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         return self._get(
-            "/v1/methods/search",
+            "/methods",
             params={"q": q, "limit": str(limit), "offset": str(offset)},
         )  # type: ignore[return-value]
 
@@ -97,10 +173,54 @@ class InternAtlasClient:
             params["year_from"] = str(year_from)
         if year_to is not None:
             params["year_to"] = str(year_to)
-        return self._get("/v1/evolution/edges", params=params)  # type: ignore[return-value]
+        return self._get("/edges", params=params)  # type: ignore[return-value]
 
     def paper_neighborhood(self, paper_id: str, *, depth: int = 1, limit: int = 100) -> dict[str, Any]:
-        return self._get(f"/v1/papers/{paper_id}/neighborhood", params={"depth": str(depth), "limit": str(limit)})
+        return self._get(f"/papers/{paper_id}/neighborhood", params={"depth": str(depth), "limit": str(limit)})
+
+    def paper_branch(self, paper_id: str, *, depth: int = 2, limit: int = 100) -> dict[str, Any]:
+        return self._get(f"/papers/{paper_id}/branch", params={"depth": str(depth), "limit": str(limit)})
+
+    def paper_ancestry(self, paper_id: str, *, depth: int = 2, limit: int = 100) -> dict[str, Any]:
+        return self._get(f"/papers/{paper_id}/ancestry", params={"depth": str(depth), "limit": str(limit)})
+
+    def find_path(
+        self,
+        from_id: str,
+        to_id: str,
+        *,
+        direction: str = "evolution",
+        max_depth: int = 10,
+    ) -> list[dict[str, Any]]:
+        return self._get(
+            "/path",
+            params={
+                "from_id": from_id,
+                "to_id": to_id,
+                "direction": direction,
+                "max_depth": str(max_depth),
+            },
+        )  # type: ignore[return-value]
+
+    def evolution_chain(
+        self,
+        domain: str,
+        *,
+        max_chains: int = 5,
+        max_depth: int = 8,
+        beam_width: int = 3,
+        strategy: str = "mcts",
+    ) -> dict[str, Any]:
+        return self._get(
+            "/visualization/evolution-chain",
+            params={
+                "domain": domain,
+                "max_chains": str(max_chains),
+                "max_depth": str(max_depth),
+                "beam_width": str(beam_width),
+                "strategy": strategy,
+            },
+        )  # type: ignore[return-value]
 
     def assist_context(
         self,
@@ -109,6 +229,8 @@ class InternAtlasClient:
         budget: str = "balanced",
         use_mcts: bool = True,
         token_budget: int = 6000,
+        max_seeds: int = 10,
+        max_edges: int = 80,
     ) -> dict[str, Any]:
         return self._post(
             "/assist/context",
@@ -117,6 +239,8 @@ class InternAtlasClient:
                 "budget": budget,
                 "use_mcts": use_mcts,
                 "token_budget": token_budget,
+                "max_seeds": max_seeds,
+                "max_edges": max_edges,
             },
         )
 

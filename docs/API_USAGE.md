@@ -241,9 +241,16 @@ Configuration can be provided in each request body:
 
 ```json
 {
-  "base_url": "https://your-host.example.com/api",
+  "base_url": "https://intern-atlas.opendatalab.org.cn/",
   "api_key": "YOUR_ATLAS_API_KEY"
 }
+```
+
+The client accepts either the website root or the API root. These are equivalent:
+
+```text
+https://intern-atlas.opendatalab.org.cn/
+https://intern-atlas.opendatalab.org.cn/api
 ```
 
 If omitted, the server reads:
@@ -258,10 +265,37 @@ Health:
 ```bash
 curl -X POST "$BASE/v1/remote/health" \
   -H "Content-Type: application/json" \
-  -d '{"base_url":"https://your-host.example.com/api"}'
+  -d '{"base_url":"https://intern-atlas.opendatalab.org.cn/"}'
 ```
 
-Hosted evidence through the local proxy:
+Hosted website search through the local proxy:
+
+```bash
+curl -X POST "$BASE/v1/remote/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "FlashAttention",
+    "search_type": "auto",
+    "limit": 20,
+    "include_subgraph": true,
+    "base_url": "https://intern-atlas.opendatalab.org.cn/"
+  }'
+```
+
+Hosted website subgraph query through the local proxy:
+
+```bash
+curl -X POST "$BASE/v1/remote/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "efficient attention",
+    "max_nodes": 80,
+    "base_url": "https://intern-atlas.opendatalab.org.cn/"
+  }'
+```
+
+Hosted evidence through the local proxy. If the hosted deployment does not expose
+`/api/v1/evidence/context`, the client falls back to `/api/assist/context`.
 
 ```bash
 curl -X POST "$BASE/v1/remote/evidence/context" \
@@ -273,7 +307,7 @@ curl -X POST "$BASE/v1/remote/evidence/context" \
     "max_papers": 60,
     "max_edges": 120,
     "year_from": 2020,
-    "base_url": "https://your-host.example.com/api",
+    "base_url": "https://intern-atlas.opendatalab.org.cn/",
     "api_key": "YOUR_ATLAS_API_KEY"
   }'
 ```
@@ -283,7 +317,27 @@ Hosted paper neighborhood through the local proxy:
 ```bash
 curl -X POST "$BASE/v1/remote/papers/neighborhood" \
   -H "Content-Type: application/json" \
-  -d '{"paper_id":"PAPER_ID","depth":1,"limit":80}'
+  -d '{"paper_id":"PAPER_ID","depth":1,"limit":80,"base_url":"https://intern-atlas.opendatalab.org.cn/"}'
+```
+
+Hosted branch, ancestry, shortest path, and evolution-chain data:
+
+```bash
+curl -X POST "$BASE/v1/remote/papers/branch" \
+  -H "Content-Type: application/json" \
+  -d '{"paper_id":"PAPER_ID","depth":2,"limit":80,"base_url":"https://intern-atlas.opendatalab.org.cn/"}'
+
+curl -X POST "$BASE/v1/remote/papers/ancestry" \
+  -H "Content-Type: application/json" \
+  -d '{"paper_id":"PAPER_ID","depth":2,"limit":80,"base_url":"https://intern-atlas.opendatalab.org.cn/"}'
+
+curl -X POST "$BASE/v1/remote/path" \
+  -H "Content-Type: application/json" \
+  -d '{"from_id":"NEWER_PAPER_ID","to_id":"OLDER_PAPER_ID","direction":"both","max_depth":10,"base_url":"https://intern-atlas.opendatalab.org.cn/"}'
+
+curl -X POST "$BASE/v1/remote/visualization/evolution-chain" \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"attention","max_chains":5,"base_url":"https://intern-atlas.opendatalab.org.cn/"}'
 ```
 
 Idea-generation and evaluation proxy endpoints are also available:
@@ -797,10 +851,14 @@ The CLI exposes these hosted calls:
 
 ```bash
 intern-atlas remote health
+intern-atlas remote search "FlashAttention" --include-subgraph
+intern-atlas remote query "efficient attention" --max-nodes 80
+intern-atlas remote chain "attention" --max-chains 5
 intern-atlas remote evidence "efficient long-context attention"
 intern-atlas remote context "efficient long-context attention"
 intern-atlas remote methods "Transformer"
 intern-atlas remote edges --method attention --limit 20
+intern-atlas remote path NEWER_PAPER_ID OLDER_PAPER_ID --direction both
 intern-atlas remote ideas "efficient long-context attention" --use-llm
 intern-atlas remote eval "Use FlashAttention and LoRA for efficient ViT tuning."
 ```
@@ -809,6 +867,12 @@ The default hosted base URL is:
 
 ```text
 https://intern-atlas.opendatalab.org.cn/api
+```
+
+The CLI also accepts the site root:
+
+```bash
+intern-atlas remote health --base-url "https://intern-atlas.opendatalab.org.cn/"
 ```
 
 If that public endpoint returns `502` or another upstream error, point the client
@@ -820,7 +884,7 @@ Override it:
 ```bash
 intern-atlas remote context \
   "efficient long-context attention" \
-  --base-url "https://your-host.example.com/api"
+  --base-url "https://intern-atlas.opendatalab.org.cn/"
 ```
 
 If your hosted deployment requires an API key:
@@ -899,7 +963,7 @@ With a custom base URL:
 
 ```python
 client = InternAtlasClient(
-    base_url="https://your-host.example.com/api",
+    base_url="https://intern-atlas.opendatalab.org.cn/",
     api_key="YOUR_ATLAS_API_KEY",
 )
 ```

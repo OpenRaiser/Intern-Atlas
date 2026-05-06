@@ -631,6 +631,42 @@ def llm_tool_manifest() -> dict[str, Any]:
                 },
             },
             {
+                "name": "intern_atlas_hosted_query",
+                "method": "POST",
+                "path": "/api/v1/remote/query",
+                "description": "Proxy a natural-language subgraph query to the hosted website graph API.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "max_nodes": {"type": "integer", "minimum": 1, "maximum": 300, "default": 30},
+                        "base_url": {"type": "string", "description": "Optional website or API root URL."},
+                        "api_key": {"type": "string", "description": "Optional hosted API bearer token."},
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "intern_atlas_hosted_evolution_chain",
+                "method": "POST",
+                "path": "/api/v1/remote/visualization/evolution-chain",
+                "description": "Return hosted website evolution-chain visualization data for a domain.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "domain": {"type": "string"},
+                        "max_chains": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5},
+                        "max_depth": {"type": "integer", "minimum": 2, "maximum": 15, "default": 8},
+                        "strategy": {"type": "string", "enum": ["mcts", "beam"], "default": "mcts"},
+                        "base_url": {"type": "string", "description": "Optional website or API root URL."},
+                        "api_key": {"type": "string", "description": "Optional hosted API bearer token."},
+                    },
+                    "required": ["domain"],
+                    "additionalProperties": False,
+                },
+            },
+            {
                 "name": "intern_atlas_search_methods",
                 "method": "GET",
                 "path": "/api/v1/methods/search",

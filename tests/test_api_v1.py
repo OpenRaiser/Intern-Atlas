@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 import intern_atlas.server as server_module
 from intern_atlas.builder import build_from_sources
+from intern_atlas.remote import InternAtlasClient, normalize_hosted_base_url
 from intern_atlas.server import create_app
 
 
@@ -131,6 +132,8 @@ def test_v1_graph_tools(tmp_path):
         tool_names = {tool["name"] for tool in tools["tools"]}
         assert "intern_atlas_evidence_context" in tool_names
         assert "intern_atlas_hosted_evidence_context" in tool_names
+        assert "intern_atlas_hosted_query" in tool_names
+        assert "intern_atlas_hosted_evolution_chain" in tool_names
         assert "intern_atlas_evolution_edges" in tool_names
         evidence_tool = next(tool for tool in tools["tools"] if tool["name"] == "intern_atlas_evidence_context")
         assert "mode" in evidence_tool["input_schema"]["properties"]
@@ -151,6 +154,26 @@ def test_v1_remote_proxy_uses_hosted_client(tmp_path, monkeypatch):
         def health(self):
             return {"status": "ok", "base_url": self.base_url, "has_key": bool(self.api_key)}
 
+        def stats(self):
+            return {"total_papers": 123}
+
+        def get_paper(self, paper_id):
+            return {"paper_id": paper_id, "title": "Remote Paper"}
+
+        def search_papers(self, query, *, limit=30):
+            return [{"paper_id": "p1", "title": query, "limit": limit}]
+
+        def unified_search(self, query, *, search_type="auto", limit=20, include_subgraph=False):
+            return {
+                "papers": [{"paper_id": "p1", "title": query}],
+                "search_type_used": search_type,
+                "total_results": 1,
+                "subgraph": {"papers": {}, "methods": {}, "edges": []} if include_subgraph else None,
+            }
+
+        def query_subgraph(self, query, *, max_nodes=30):
+            return {"papers": {"p1": {"paper_id": "p1", "title": query}}, "methods": {}, "edges": []}
+
         def evidence_context(self, query, **kwargs):
             return {
                 "query": query,
@@ -163,6 +186,21 @@ def test_v1_remote_proxy_uses_hosted_client(tmp_path, monkeypatch):
                 "counts": {"papers": 0, "method_edges": 0, "bottlenecks": 0, "mechanisms": 0},
                 "parameters": kwargs,
             }
+
+        def paper_neighborhood(self, paper_id, *, depth=1, limit=100):
+            return {"papers": {paper_id: {"paper_id": paper_id}}, "methods": {}, "edges": [], "center_id": paper_id}
+
+        def paper_branch(self, paper_id, *, depth=2, limit=100):
+            return {"papers": {paper_id: {"paper_id": paper_id}}, "methods": {}, "edges": [], "center_id": paper_id}
+
+        def paper_ancestry(self, paper_id, *, depth=2, limit=100):
+            return {"papers": {paper_id: {"paper_id": paper_id}}, "methods": {}, "edges": [], "center_id": paper_id}
+
+        def find_path(self, from_id, to_id, *, direction="evolution", max_depth=10):
+            return [{"source_paper_id": from_id, "target_paper_id": to_id, "direction": direction}]
+
+        def evolution_chain(self, domain, *, max_chains=5, max_depth=8, beam_width=3, strategy="mcts"):
+            return {"domain": domain, "nodes": [], "edges": [], "chains": [], "strategy": strategy}
 
     monkeypatch.setattr(server_module, "InternAtlasClient", FakeClient)
     with TestClient(server_module.create_app(db_path)) as client:
@@ -184,11 +222,55 @@ def test_v1_remote_proxy_uses_hosted_client(tmp_path, monkeypatch):
         assert evidence.json()["parameters"]["mode"] == "deep"
         assert evidence.json()["parameters"]["depth"] == 4
 
+        search = client.post(
+            "/api/v1/remote/search",
+            json={"query": "attention", "search_type": "direction", "include_subgraph": True},
+        )
+        assert search.status_code == 200
+        assert search.json()["source"] == "hosted"
+        assert search.json()["search_type_used"] == "direction"
+        assert search.json()["subgraph"] is not None
+
+        query = client.post("/api/v1/remote/query", json={"query": "attention", "max_nodes": 20})
+        assert query.status_code == 200
+        assert query.json()["source"] == "hosted"
+        assert "p1" in query.json()["papers"]
+
+        detail = client.post("/api/v1/remote/papers/detail", json={"paper_id": "p1"})
+        assert detail.status_code == 200
+        assert detail.json()["paper_id"] == "p1"
+
+        path = client.post("/api/v1/remote/path", json={"from_id": "p2", "to_id": "p1", "direction": "both"})
+        assert path.status_code == 200
+        assert path.json()[0]["direction"] == "both"
+
+        chain = client.post(
+            "/api/v1/remote/visualization/evolution-chain",
+            json={"domain": "attention", "strategy": "beam"},
+        )
+        assert chain.status_code == 200
+        assert chain.json()["source"] == "hosted"
+        assert chain.json()["domain"] == "attention"
+
         bad_url = client.post(
             "/api/v1/remote/health",
             json={"base_url": "file:///tmp/not-an-api"},
         )
         assert bad_url.status_code == 400
+
+
+def test_hosted_base_url_accepts_site_root():
+    assert normalize_hosted_base_url("https://intern-atlas.opendatalab.org.cn/") == (
+        "https://intern-atlas.opendatalab.org.cn/api"
+    )
+    assert normalize_hosted_base_url("https://intern-atlas.opendatalab.org.cn/api") == (
+        "https://intern-atlas.opendatalab.org.cn/api"
+    )
+    client = InternAtlasClient("https://intern-atlas.opendatalab.org.cn/")
+    try:
+        assert client.base_url == "https://intern-atlas.opendatalab.org.cn/api"
+    finally:
+        client.close()
 
 
 def test_ui_exposes_real_controls(tmp_path):
