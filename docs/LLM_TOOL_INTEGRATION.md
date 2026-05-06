@@ -47,6 +47,20 @@ Fetch the machine-readable tool manifest:
 curl "http://127.0.0.1:8000/api/v1/llm/tools"
 ```
 
+If you want the local server to call a hosted Intern Atlas deployment, configure
+the hosted base URL and key, then use `/api/v1/remote/...` proxy endpoints:
+
+```bash
+export INTERN_ATLAS_REMOTE_BASE_URL="https://your-host.example.com/api"
+export INTERN_ATLAS_API_KEY="YOUR_ATLAS_API_KEY"
+
+curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"efficient attention","mode":"deep"}'
+```
+
+The browser workspace uses the same proxy when `Hosted API` is selected.
+
 ## Core Tool
 
 Use this endpoint as the main LLM tool:

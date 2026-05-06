@@ -169,6 +169,9 @@ INDEX_HTML = r"""<!doctype html>
       grid-template-columns: repeat(3, 1fr);
       gap: 6px;
     }
+    .segmented.two {
+      grid-template-columns: repeat(2, 1fr);
+    }
     .segmented button {
       background: #fff;
       color: var(--muted);
@@ -179,6 +182,22 @@ INDEX_HTML = r"""<!doctype html>
       color: #fff;
       border-color: var(--green);
       background: var(--green);
+    }
+    .remote-settings {
+      display: none;
+      gap: 10px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.62);
+    }
+    .remote-settings.is-visible {
+      display: grid;
+    }
+    .source-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
     }
     .checkline {
       display: flex;
@@ -519,6 +538,27 @@ INDEX_HTML = r"""<!doctype html>
           </div>
         </div>
 
+        <div>
+          <label>Data source</label>
+          <div class="segmented two" role="group" aria-label="Data source">
+            <button type="button" data-source="local" class="is-active">Local graph</button>
+            <button type="button" data-source="hosted">Hosted API</button>
+          </div>
+        </div>
+
+        <div id="remoteSettings" class="remote-settings">
+          <div>
+            <label for="remoteBaseUrl">Hosted base URL</label>
+            <input id="remoteBaseUrl" placeholder="https://intern-atlas.opendatalab.org.cn/api" />
+          </div>
+          <div>
+            <label for="remoteApiKey">Hosted API key</label>
+            <input id="remoteApiKey" type="password" placeholder="optional bearer token" autocomplete="off" />
+          </div>
+          <button id="remoteHealthBtn" type="button" class="secondary">Check hosted API</button>
+          <div class="source-note">Requests are proxied through this local FastAPI server, so localhost frontends avoid browser CORS issues.</div>
+        </div>
+
         <div class="split">
           <div>
             <label for="yearFrom">Year from</label>
@@ -680,7 +720,7 @@ INDEX_HTML = r"""<!doctype html>
     const modePresets = {
       light: { maxPapers: 12, maxEdges: 18, depth: 0 },
       balanced: { maxPapers: 24, maxEdges: 50, depth: 1 },
-      deep: { maxPapers: 80, maxEdges: 160, depth: 2 },
+      deep: { maxPapers: 100, maxEdges: 300, depth: 2 },
     };
     const state = {
       evidence: null,
@@ -688,6 +728,8 @@ INDEX_HTML = r"""<!doctype html>
       edges: [],
       active: null,
       mode: 'balanced',
+      source: 'local',
+      resultSource: null,
       busy: false,
       view: 'empty',
       neighborhood: null,
@@ -717,6 +759,25 @@ INDEX_HTML = r"""<!doctype html>
         $('depth').value = preset.depth;
       }
       renderModeHint();
+    }
+
+    function setSource(source) {
+      state.source = source === 'hosted' ? 'hosted' : 'local';
+      document.querySelectorAll('[data-source]').forEach((button) => {
+        button.classList.toggle('is-active', button.dataset.source === state.source);
+      });
+      $('remoteSettings').classList.toggle('is-visible', state.source === 'hosted');
+      renderModeHint();
+      renderFilterBar(state.evidence?.parameters || {});
+    }
+
+    function remoteConfig() {
+      const baseUrl = $('remoteBaseUrl').value.trim();
+      const apiKey = $('remoteApiKey').value.trim();
+      const config = {};
+      if (baseUrl) config.base_url = baseUrl;
+      if (apiKey) config.api_key = apiKey;
+      return config;
     }
 
     function readNumber(id, label, min, max, fallback = null) {
@@ -765,14 +826,20 @@ INDEX_HTML = r"""<!doctype html>
       setBusy(true);
       try {
         const payload = buildPayload();
-        setStatus(`Searching ${payload.mode} evidence...`);
-        const data = await api('/api/v1/evidence/context', {
+        const endpoint = state.source === 'hosted'
+          ? '/api/v1/remote/evidence/context'
+          : '/api/v1/evidence/context';
+        const requestBody = state.source === 'hosted'
+          ? { ...payload, ...remoteConfig() }
+          : payload;
+        setStatus(`Searching ${state.source} ${payload.mode} evidence...`);
+        const data = await api(endpoint, {
           method: 'POST',
-          body: JSON.stringify(payload),
+          body: JSON.stringify(requestBody),
         });
         applyEvidence(data);
         const p = data.parameters || {};
-        setStatus(`Loaded ${data.counts?.papers || 0} papers, depth ${p.depth ?? payload.depth ?? 0}`);
+        setStatus(`Loaded ${data.counts?.papers || 0} papers from ${state.resultSource || state.source}`);
       } catch (error) {
         showMessage(error);
         setStatus('Error');
@@ -786,6 +853,7 @@ INDEX_HTML = r"""<!doctype html>
       state.papers = Object.fromEntries((data.papers || []).map((paper) => [paper.paper_id, paper]));
       state.edges = data.method_edges || [];
       state.active = null;
+      state.resultSource = data.source === 'hosted' || state.source === 'hosted' ? 'hosted' : 'local';
       state.view = 'evidence';
       state.neighborhood = null;
       renderAll();
@@ -800,11 +868,18 @@ INDEX_HTML = r"""<!doctype html>
       try {
         const depth = Math.max(1, readNumber('depth', 'Depth', 0, 4, 1));
         const limit = Math.max(10, readNumber('maxPapers', 'Papers', 1, 100, 80));
-        const sg = await api(`/api/v1/papers/${encodeURIComponent(centerId)}/neighborhood?depth=${depth}&limit=${limit}`);
+        const useHosted = state.resultSource === 'hosted';
+        const sg = useHosted
+          ? await api('/api/v1/remote/papers/neighborhood', {
+              method: 'POST',
+              body: JSON.stringify({ paper_id: centerId, depth, limit, ...remoteConfig() }),
+            })
+          : await api(`/api/v1/papers/${encodeURIComponent(centerId)}/neighborhood?depth=${depth}&limit=${limit}`);
         state.evidence = null;
         state.papers = sg.papers || {};
         state.edges = sg.edges || [];
         state.active = state.papers[centerId] ? centerId : null;
+        state.resultSource = useHosted ? 'hosted' : 'local';
         state.view = 'neighborhood';
         state.neighborhood = {
           center_id: centerId,
@@ -841,6 +916,7 @@ INDEX_HTML = r"""<!doctype html>
       $('methodFilter').value = '';
       $('includeContext').checked = true;
       setMode('balanced', true);
+      setSource('local');
       showMessage('');
       setStatus('Ready');
       clearWorkspace();
@@ -851,6 +927,7 @@ INDEX_HTML = r"""<!doctype html>
       state.papers = {};
       state.edges = [];
       state.active = null;
+      state.resultSource = null;
       state.view = 'empty';
       state.neighborhood = null;
       renderAll();
@@ -861,6 +938,23 @@ INDEX_HTML = r"""<!doctype html>
       $('papersStat').textContent = s.papers ?? 0;
       $('methodsStat').textContent = s.methods ?? 0;
       $('edgesStat').textContent = s.edges ?? 0;
+    }
+
+    async function checkRemoteHealth() {
+      showMessage('');
+      setBusy(true);
+      try {
+        const data = await api('/api/v1/remote/health', {
+          method: 'POST',
+          body: JSON.stringify(remoteConfig()),
+        });
+        setStatus(`Hosted API ok: ${data.status || 'ok'}`);
+      } catch (error) {
+        showMessage(error);
+        setStatus('Hosted API error');
+      } finally {
+        setBusy(false);
+      }
     }
 
     function renderAll() {
@@ -902,7 +996,7 @@ INDEX_HTML = r"""<!doctype html>
     function renderModeHint() {
       const preset = modePresets[state.mode];
       if (!preset) return;
-      setStatus(`${state.mode}: up to ${preset.maxPapers} papers, ${preset.maxEdges} edges, depth ${preset.depth}`);
+      setStatus(`${state.source}: ${state.mode}, up to ${preset.maxPapers} papers, ${preset.maxEdges} edges, depth ${preset.depth}`);
     }
 
     function renderFilterBar(params = {}) {
@@ -917,12 +1011,14 @@ INDEX_HTML = r"""<!doctype html>
         return;
       }
       const chips = [
+        `source: ${state.resultSource || state.source}`,
         `query: ${state.evidence?.query || $('query').value.trim() || 'none'}`,
         `mode: ${params.mode || state.mode}`,
         `depth: ${params.depth ?? $('depth').value}`,
         `papers: ${params.max_papers ?? $('maxPapers').value}`,
         `edges: ${params.max_edges ?? $('maxEdges').value}`,
       ];
+      if ((state.resultSource || state.source) === 'hosted') chips.push(`hosted: ${$('remoteBaseUrl').value.trim() || 'default'}`);
       if (params.year_from || params.year_to) chips.push(`years: ${params.year_from || 'any'}-${params.year_to || 'any'}`);
       if (params.edge_type) chips.push(`edge: ${params.edge_type}`);
       if (params.method) chips.push(`method: ${params.method}`);
@@ -1110,6 +1206,7 @@ INDEX_HTML = r"""<!doctype html>
     function downloadJson() {
       const payload = state.evidence || {
         view: state.view,
+        source: state.resultSource || state.source,
         neighborhood: state.neighborhood,
         papers: Object.values(state.papers),
         method_edges: state.edges,
@@ -1165,6 +1262,7 @@ INDEX_HTML = r"""<!doctype html>
       const lines = [
         'Use this Intern Atlas evidence view to support research idea generation.',
         'Ground claims in the listed paper IDs and avoid inventing papers or results.',
+        `Source: ${state.resultSource || state.source}`,
         `Research query: ${state.evidence?.query || $('query').value.trim() || 'not specified'}`,
         '',
         'Papers:',
@@ -1220,6 +1318,7 @@ INDEX_HTML = r"""<!doctype html>
       state.busy = value;
       $('runBtn').disabled = value;
       $('resetBtn').disabled = value;
+      $('remoteHealthBtn').disabled = value;
       $('runBtn').textContent = value ? 'Searching...' : 'Run evidence search';
       $('loadingShade').style.display = value ? 'grid' : 'none';
       renderSelection();
@@ -1253,10 +1352,14 @@ INDEX_HTML = r"""<!doctype html>
     document.querySelectorAll('[data-mode]').forEach((button) => {
       button.addEventListener('click', () => setMode(button.dataset.mode, true));
     });
+    document.querySelectorAll('[data-source]').forEach((button) => {
+      button.addEventListener('click', () => setSource(button.dataset.source));
+    });
     $('runBtn').addEventListener('click', runEvidenceSearch);
     $('resetBtn').addEventListener('click', resetFilters);
     $('copyBtn').addEventListener('click', copyContext);
     $('docsBtn').addEventListener('click', () => { window.location.href = '/api/docs'; });
+    $('remoteHealthBtn').addEventListener('click', checkRemoteHealth);
     $('openNeighborhoodBtn').addEventListener('click', openSelectedNeighborhood);
     $('downloadJsonBtn').addEventListener('click', downloadJson);
     $('downloadPapersBtn').addEventListener('click', downloadPapersCsv);
@@ -1267,6 +1370,7 @@ INDEX_HTML = r"""<!doctype html>
     });
 
     setMode('balanced', true);
+    setSource('local');
     updateDownloadState();
     loadStats().catch(showMessage).finally(runEvidenceSearch);
   </script>

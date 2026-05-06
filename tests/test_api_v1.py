@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+import intern_atlas.server as server_module
 from intern_atlas.builder import build_from_sources
 from intern_atlas.server import create_app
 
@@ -129,10 +130,65 @@ def test_v1_graph_tools(tmp_path):
         tools = client.get("/api/v1/llm/tools").json()
         tool_names = {tool["name"] for tool in tools["tools"]}
         assert "intern_atlas_evidence_context" in tool_names
+        assert "intern_atlas_hosted_evidence_context" in tool_names
         assert "intern_atlas_evolution_edges" in tool_names
         evidence_tool = next(tool for tool in tools["tools"] if tool["name"] == "intern_atlas_evidence_context")
         assert "mode" in evidence_tool["input_schema"]["properties"]
         assert "year_from" in evidence_tool["input_schema"]["properties"]
+
+
+def test_v1_remote_proxy_uses_hosted_client(tmp_path, monkeypatch):
+    db_path = build_sample_graph(tmp_path)
+
+    class FakeClient:
+        def __init__(self, base_url=None, *, api_key=None):
+            self.base_url = base_url
+            self.api_key = api_key
+
+        def close(self):
+            pass
+
+        def health(self):
+            return {"status": "ok", "base_url": self.base_url, "has_key": bool(self.api_key)}
+
+        def evidence_context(self, query, **kwargs):
+            return {
+                "query": query,
+                "papers": [],
+                "method_edges": [],
+                "bottlenecks": [],
+                "mechanisms": [],
+                "timeline": [],
+                "suggested_prompt_context": "",
+                "counts": {"papers": 0, "method_edges": 0, "bottlenecks": 0, "mechanisms": 0},
+                "parameters": kwargs,
+            }
+
+    monkeypatch.setattr(server_module, "InternAtlasClient", FakeClient)
+    with TestClient(server_module.create_app(db_path)) as client:
+        health = client.post(
+            "/api/v1/remote/health",
+            json={"base_url": "https://example.test/api", "api_key": "secret"},
+        )
+        assert health.status_code == 200
+        assert health.json()["source"] == "hosted"
+        assert health.json()["base_url"] == "https://example.test/api"
+        assert health.json()["has_key"] is True
+
+        evidence = client.post(
+            "/api/v1/remote/evidence/context",
+            json={"query": "efficient attention", "mode": "deep", "depth": 4},
+        )
+        assert evidence.status_code == 200
+        assert evidence.json()["source"] == "hosted"
+        assert evidence.json()["parameters"]["mode"] == "deep"
+        assert evidence.json()["parameters"]["depth"] == 4
+
+        bad_url = client.post(
+            "/api/v1/remote/health",
+            json={"base_url": "file:///tmp/not-an-api"},
+        )
+        assert bad_url.status_code == 400
 
 
 def test_ui_exposes_real_controls(tmp_path):
@@ -149,6 +205,14 @@ def test_ui_exposes_real_controls(tmp_path):
             'id="downloadContextBtn"',
             'id="filterBar"',
             'id="loadingShade"',
+            'id="remoteSettings"',
+            'id="remoteBaseUrl"',
+            'id="remoteApiKey"',
+            'id="remoteHealthBtn"',
+            'data-source="local"',
+            'data-source="hosted"',
+            "/api/v1/remote/evidence/context",
+            "/api/v1/remote/papers/neighborhood",
             "function clearWorkspace",
             "function currentPromptContext",
             'data-mode="light"',

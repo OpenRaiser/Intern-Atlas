@@ -126,6 +126,12 @@ year range, edge type, method filter, graph depth, paper cap, and edge cap. It
 also downloads the current evidence view as JSON, paper CSV, edge CSV, or
 Markdown prompt context.
 
+The workspace can use either the local SQLite graph or a hosted Intern Atlas API.
+Choose `Hosted API` in the sidebar, set the hosted base URL and optional API
+key, then run the same evidence search. The browser calls the local FastAPI
+proxy at `/api/v1/remote/...`, so local frontends do not need to fight browser
+CORS rules.
+
 ## Use The Hosted Intern Atlas API
 
 The CLI can also call the hosted Intern Atlas API for larger graph evidence,
@@ -146,6 +152,24 @@ intern-atlas remote ideas "long-context efficient attention" --use-llm
 
 intern-atlas remote eval \
   "Use FlashAttention and LoRA for parameter-efficient vision transformer tuning."
+```
+
+Hosted defaults can be configured once:
+
+```bash
+export INTERN_ATLAS_REMOTE_BASE_URL="https://your-host.example.com/api"
+export INTERN_ATLAS_API_KEY="YOUR_ATLAS_API_KEY"
+```
+
+If the public demo endpoint returns an upstream error, use your own deployed
+base URL with the environment variable above or `--base-url`.
+
+The local server also exposes hosted proxy endpoints:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"efficient attention","mode":"deep"}'
 ```
 
 See [docs/API_USAGE.md](docs/API_USAGE.md) for endpoint details and Python

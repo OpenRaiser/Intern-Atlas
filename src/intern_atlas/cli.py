@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
+
+import httpx
 
 from .builder import build_from_sources
 from .db import connect, graph_stats
-from .remote import InternAtlasClient
+from .remote import DEFAULT_HOSTED_BASE_URL, InternAtlasClient
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -39,8 +42,12 @@ def main(argv: list[str] | None = None) -> int:
     remote_sub = p_remote.add_subparsers(dest="remote_command", required=True)
 
     def add_remote_common(r: argparse.ArgumentParser) -> None:
-        r.add_argument("--base-url", default="https://intern-atlas.opendatalab.org.cn/api")
-        r.add_argument("--api-key", default=None)
+        r.add_argument(
+            "--base-url",
+            default=None,
+            help=f"Hosted API base URL. Defaults to INTERN_ATLAS_REMOTE_BASE_URL or {DEFAULT_HOSTED_BASE_URL}.",
+        )
+        r.add_argument("--api-key", default=None, help="Bearer token. Defaults to INTERN_ATLAS_API_KEY if set.")
 
     r_health = remote_sub.add_parser("health")
     add_remote_common(r_health)
@@ -124,41 +131,71 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "remote":
         client = InternAtlasClient(args.base_url, api_key=args.api_key)
         try:
-            if args.remote_command == "health":
-                data = client.health()
-            elif args.remote_command == "context":
-                data = client.assist_context(args.text)
-            elif args.remote_command == "evidence":
-                data = client.evidence_context(
-                    args.text,
-                    max_papers=args.max_papers,
-                    max_edges=args.max_edges,
-                    mode=args.mode,
-                    depth=args.depth,
-                    year_from=args.year_from,
-                    year_to=args.year_to,
-                    edge_type=args.edge_type,
-                    method=args.method,
+            try:
+                if args.remote_command == "health":
+                    data = client.health()
+                elif args.remote_command == "context":
+                    data = client.assist_context(args.text)
+                elif args.remote_command == "evidence":
+                    data = client.evidence_context(
+                        args.text,
+                        max_papers=args.max_papers,
+                        max_edges=args.max_edges,
+                        mode=args.mode,
+                        depth=args.depth,
+                        year_from=args.year_from,
+                        year_to=args.year_to,
+                        edge_type=args.edge_type,
+                        method=args.method,
+                    )
+                elif args.remote_command == "methods":
+                    data = client.search_methods(args.text, limit=args.limit)
+                elif args.remote_command == "edges":
+                    data = client.evolution_edges(
+                        paper_id=args.paper_id,
+                        edge_type=args.edge_type,
+                        method=args.method,
+                        year_from=args.year_from,
+                        year_to=args.year_to,
+                        limit=args.limit,
+                    )
+                elif args.remote_command == "paper":
+                    data = client.paper_neighborhood(args.paper_id, depth=args.depth, limit=args.limit)
+                elif args.remote_command == "ideas":
+                    data = client.generate_ideas(args.text, use_llm=args.use_llm)
+                elif args.remote_command == "eval":
+                    data = client.evaluate_idea(args.text, use_llm=args.use_llm)
+                else:
+                    raise AssertionError(args.remote_command)
+            except httpx.HTTPStatusError as exc:
+                print(
+                    json.dumps(
+                        {
+                            "error": "hosted_api_http_error",
+                            "status_code": exc.response.status_code,
+                            "url": str(exc.request.url),
+                            "detail": exc.response.text[:500],
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    file=sys.stderr,
                 )
-            elif args.remote_command == "methods":
-                data = client.search_methods(args.text, limit=args.limit)
-            elif args.remote_command == "edges":
-                data = client.evolution_edges(
-                    paper_id=args.paper_id,
-                    edge_type=args.edge_type,
-                    method=args.method,
-                    year_from=args.year_from,
-                    year_to=args.year_to,
-                    limit=args.limit,
+                return 1
+            except httpx.RequestError as exc:
+                print(
+                    json.dumps(
+                        {
+                            "error": "hosted_api_unavailable",
+                            "url": str(exc.request.url) if exc.request else None,
+                            "detail": str(exc),
+                        },
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    file=sys.stderr,
                 )
-            elif args.remote_command == "paper":
-                data = client.paper_neighborhood(args.paper_id, depth=args.depth, limit=args.limit)
-            elif args.remote_command == "ideas":
-                data = client.generate_ideas(args.text, use_llm=args.use_llm)
-            elif args.remote_command == "eval":
-                data = client.evaluate_idea(args.text, use_llm=args.use_llm)
-            else:
-                raise AssertionError(args.remote_command)
+                return 1
             print(json.dumps(data, ensure_ascii=False, indent=2))
         finally:
             client.close()

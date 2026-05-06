@@ -42,6 +42,13 @@ OpenAPI docs:
 http://127.0.0.1:8000/api/docs
 ```
 
+The local server allows browser calls from `localhost` and `127.0.0.1` by
+default. Add more allowed origins for a deployed frontend with:
+
+```bash
+export INTERN_ATLAS_CORS_ORIGINS="https://your-app.example.com"
+```
+
 Use a base URL variable for curl examples:
 
 ```bash
@@ -91,6 +98,7 @@ Features:
 
 - shows graph statistics;
 - builds `/api/v1/evidence/context` evidence packs from a research query;
+- can switch between the local SQLite graph and a hosted Intern Atlas API;
 - provides real `light`, `balanced`, and `deep` retrieval modes;
 - filters by year range, edge type, method text, node count, edge count, and graph depth;
 - opens a local paper neighborhood for a selected paper;
@@ -98,6 +106,10 @@ Features:
 - lists papers, method edges, bottlenecks, mechanisms, and timeline entries;
 - downloads the current evidence view as JSON, paper CSV, edge CSV, or Markdown prompt context;
 - copies prompt context when clipboard permission is available.
+
+When `Hosted API` is selected, the browser does not call the hosted service
+directly. It calls local proxy endpoints under `/api/v1/remote/...`, which avoids
+browser CORS issues and keeps the hosted API key out of the repository.
 
 Example:
 
@@ -126,6 +138,12 @@ GET /api/v1/papers/{paper_id}/neighborhood
 GET /api/v1/papers/search
 POST /api/v1/query
 GET /api/v1/llm/tools
+POST /api/v1/remote/health
+POST /api/v1/remote/evidence/context
+POST /api/v1/remote/papers/neighborhood
+POST /api/v1/remote/assist/context
+POST /api/v1/remote/ideas
+POST /api/v1/remote/eval
 ```
 
 The most important endpoint for LLM and agent systems is:
@@ -211,6 +229,73 @@ Fetch tool metadata for an LLM application:
 
 ```bash
 curl "$BASE/v1/llm/tools"
+```
+
+## Local Proxy To A Hosted API
+
+Use these endpoints when you are running the local server but want to query a
+hosted Intern Atlas deployment. This is the recommended path for browser apps
+running on localhost because the local server handles the outbound hosted call.
+
+Configuration can be provided in each request body:
+
+```json
+{
+  "base_url": "https://your-host.example.com/api",
+  "api_key": "YOUR_ATLAS_API_KEY"
+}
+```
+
+If omitted, the server reads:
+
+```bash
+export INTERN_ATLAS_REMOTE_BASE_URL="https://your-host.example.com/api"
+export INTERN_ATLAS_API_KEY="YOUR_ATLAS_API_KEY"
+```
+
+Health:
+
+```bash
+curl -X POST "$BASE/v1/remote/health" \
+  -H "Content-Type: application/json" \
+  -d '{"base_url":"https://your-host.example.com/api"}'
+```
+
+Hosted evidence through the local proxy:
+
+```bash
+curl -X POST "$BASE/v1/remote/evidence/context" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "efficient long-context attention",
+    "mode": "deep",
+    "depth": 4,
+    "max_papers": 60,
+    "max_edges": 120,
+    "year_from": 2020,
+    "base_url": "https://your-host.example.com/api",
+    "api_key": "YOUR_ATLAS_API_KEY"
+  }'
+```
+
+Hosted paper neighborhood through the local proxy:
+
+```bash
+curl -X POST "$BASE/v1/remote/papers/neighborhood" \
+  -H "Content-Type: application/json" \
+  -d '{"paper_id":"PAPER_ID","depth":1,"limit":80}'
+```
+
+Idea-generation and evaluation proxy endpoints are also available:
+
+```bash
+curl -X POST "$BASE/v1/remote/ideas" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"efficient long-context attention","use_llm":false}'
+
+curl -X POST "$BASE/v1/remote/eval" \
+  -H "Content-Type: application/json" \
+  -d '{"idea":"Use FlashAttention and LoRA for efficient ViT tuning.","use_llm":false}'
 ```
 
 See [LLM_TOOL_INTEGRATION.md](LLM_TOOL_INTEGRATION.md) for provider-facing
@@ -725,6 +810,10 @@ The default hosted base URL is:
 ```text
 https://intern-atlas.opendatalab.org.cn/api
 ```
+
+If that public endpoint returns `502` or another upstream error, point the client
+at your own deployed Intern Atlas API with `--base-url` or
+`INTERN_ATLAS_REMOTE_BASE_URL`.
 
 Override it:
 

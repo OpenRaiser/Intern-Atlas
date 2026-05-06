@@ -1,7 +1,10 @@
 """FastAPI app for querying a local Intern Atlas SQLite graph."""
 
+import os
 from pathlib import Path
 from typing import Any
+
+import httpx
 
 from .db import connect, graph_stats, paper_summary
 from .evidence import (
@@ -13,11 +16,13 @@ from .evidence import (
     llm_tool_manifest,
     subgraph,
 )
+from .remote import InternAtlasClient
 from .ui import INDEX_HTML
 
 
 def create_app(db_path: str | Path):
     from fastapi import FastAPI, HTTPException, Query
+    from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import HTMLResponse
     from pydantic import BaseModel, Field
 
@@ -29,6 +34,19 @@ def create_app(db_path: str | Path):
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
+    )
+    extra_origins = [
+        origin.strip()
+        for origin in os.getenv("INTERN_ATLAS_CORS_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=extra_origins,
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     class QueryRequest(BaseModel):
@@ -46,6 +64,55 @@ def create_app(db_path: str | Path):
         edge_type: str | None = Field(None, max_length=80)
         method: str | None = Field(None, max_length=200)
         include_prompt_context: bool = True
+
+    class RemoteConfigRequest(BaseModel):
+        base_url: str | None = Field(None, max_length=500)
+        api_key: str | None = Field(None, max_length=500)
+
+    class RemoteEvidenceRequest(EvidenceRequest):
+        base_url: str | None = Field(None, max_length=500)
+        api_key: str | None = Field(None, max_length=500)
+
+    class RemoteNeighborhoodRequest(RemoteConfigRequest):
+        paper_id: str = Field(..., min_length=1, max_length=200)
+        depth: int = Field(1, ge=0, le=4)
+        limit: int = Field(100, ge=10, le=300)
+
+    class RemoteAssistRequest(RemoteConfigRequest):
+        query: str = Field(..., min_length=1, max_length=500)
+        budget: str = Field("balanced", pattern="^(light|balanced|deep)$")
+        use_mcts: bool = True
+        token_budget: int = Field(6000, ge=1000, le=30000)
+
+    class RemoteIdeaRequest(RemoteConfigRequest):
+        query: str = Field(..., min_length=1, max_length=500)
+        use_llm: bool = False
+        evidence_budget: str = Field("balanced", pattern="^(light|balanced|deep)$")
+
+    class RemoteEvalRequest(RemoteConfigRequest):
+        idea: str = Field(..., min_length=1, max_length=4000)
+        use_llm: bool = False
+
+    def call_remote(req: RemoteConfigRequest, fn) -> Any:
+        base_url = (req.base_url or "").strip() or None
+        api_key = (req.api_key or "").strip() or None
+        if base_url and not base_url.startswith(("http://", "https://")):
+            raise HTTPException(status_code=400, detail="base_url must start with http:// or https://")
+        client = InternAtlasClient(base_url, api_key=api_key)
+        try:
+            return fn(client)
+        except httpx.HTTPStatusError as exc:
+            detail = exc.response.text[:500] or exc.response.reason_phrase
+            raise HTTPException(status_code=exc.response.status_code, detail=detail) from exc
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=502, detail=f"hosted API unavailable: {exc}") from exc
+        finally:
+            client.close()
+
+    def mark_remote(data: Any) -> Any:
+        if isinstance(data, dict):
+            data.setdefault("source", "hosted")
+        return data
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def index() -> str:
@@ -80,6 +147,9 @@ def create_app(db_path: str | Path):
                 "POST /api/v1/evidence/context",
                 "GET /api/v1/methods/search?q=...",
                 "GET /api/v1/evolution/edges",
+                "POST /api/v1/remote/health",
+                "POST /api/v1/remote/evidence/context",
+                "POST /api/v1/remote/papers/neighborhood",
                 "POST /api/query",
                 "POST /api/assist/context",
             ],
@@ -281,5 +351,69 @@ def create_app(db_path: str | Path):
     @app.get("/api/v1/llm/tools")
     def llm_tools() -> dict[str, Any]:
         return llm_tool_manifest()
+
+    @app.post("/api/v1/remote/health")
+    def remote_health(req: RemoteConfigRequest) -> dict[str, Any]:
+        return mark_remote(call_remote(req, lambda client: client.health()))
+
+    @app.post("/api/v1/remote/evidence/context")
+    def remote_evidence_context(req: RemoteEvidenceRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.evidence_context(
+                    req.query,
+                    max_papers=req.max_papers,
+                    max_edges=req.max_edges,
+                    mode=req.mode,
+                    depth=req.depth,
+                    year_from=req.year_from,
+                    year_to=req.year_to,
+                    edge_type=req.edge_type,
+                    method=req.method,
+                    include_prompt_context=req.include_prompt_context,
+                ),
+            )
+        )
+
+    @app.post("/api/v1/remote/papers/neighborhood")
+    def remote_paper_neighborhood(req: RemoteNeighborhoodRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.paper_neighborhood(req.paper_id, depth=req.depth, limit=req.limit),
+            )
+        )
+
+    @app.post("/api/v1/remote/assist/context")
+    def remote_assist_context(req: RemoteAssistRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.assist_context(
+                    req.query,
+                    budget=req.budget,
+                    use_mcts=req.use_mcts,
+                    token_budget=req.token_budget,
+                ),
+            )
+        )
+
+    @app.post("/api/v1/remote/ideas")
+    def remote_ideas(req: RemoteIdeaRequest) -> dict[str, Any]:
+        return mark_remote(
+            call_remote(
+                req,
+                lambda client: client.generate_ideas(
+                    req.query,
+                    use_llm=req.use_llm,
+                    evidence_budget=req.evidence_budget,
+                ),
+            )
+        )
+
+    @app.post("/api/v1/remote/eval")
+    def remote_eval(req: RemoteEvalRequest) -> dict[str, Any]:
+        return mark_remote(call_remote(req, lambda client: client.evaluate_idea(req.idea, use_llm=req.use_llm)))
 
     return app

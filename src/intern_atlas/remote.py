@@ -2,21 +2,26 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import httpx
 
 
+DEFAULT_HOSTED_BASE_URL = "https://intern-atlas.opendatalab.org.cn/api"
+
+
 class InternAtlasClient:
     def __init__(
         self,
-        base_url: str = "https://intern-atlas.opendatalab.org.cn/api",
+        base_url: str | None = None,
         *,
         api_key: str | None = None,
         timeout_seconds: float = 120.0,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
+        configured_base_url = base_url or os.getenv("INTERN_ATLAS_REMOTE_BASE_URL") or DEFAULT_HOSTED_BASE_URL
+        self.base_url = configured_base_url.rstrip("/")
+        self.api_key = api_key or os.getenv("INTERN_ATLAS_API_KEY") or os.getenv("INTERN_ATLAS_REMOTE_API_KEY")
         self._client = httpx.Client(timeout=timeout_seconds)
 
     def close(self) -> None:
