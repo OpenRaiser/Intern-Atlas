@@ -4,7 +4,7 @@
 
 <p align="center">沿着论文之间的引用，追溯一个研究方法如何演变。</p>
 
-<p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">浏览图谱 ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">论文</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">数据集</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API 文档</a></p>
+<p align="center"><strong><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@690508de95c1e7574540bb7f2c4eb8f8d799253a/assets/workspace-tour-zh.mp4">▶ 观看 12 秒操作视频</a> &nbsp; / &nbsp; <a href="https://intern-atlas.opendatalab.org.cn/">浏览图谱 ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">论文</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">数据集</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API 文档</a></p>
 
 ---
 
@@ -74,7 +74,7 @@ intern-atlas serve --db outputs/smoke.db --host 127.0.0.1 --port 8000
 
 <picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour-zh.png"><img src="assets/workspace-tour-zh.gif" width="100%" alt="本地工作台三步演示：搜索 FlashAttention、查看候选关系、导出研究上下文。"></picture>
 
-[观看 12 秒短片（中文字幕，MP4）](assets/workspace-tour-zh.mp4) · [查看静态图](assets/workspace-tour-zh.png)
+[观看 12 秒短片（中文字幕，MP4）](https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@690508de95c1e7574540bb7f2c4eb8f8d799253a/assets/workspace-tour-zh.mp4) · [查看静态图](assets/workspace-tour-zh.png)
 
 <details>
 <summary>查看本地工作台完整截图</summary>
