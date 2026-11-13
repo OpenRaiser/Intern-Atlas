@@ -154,6 +154,8 @@ Use a fresh `--out` path for a clean build. Reusing a database can retain record
 
 </details>
 
+<p align="center"><img src="assets/paper-theatre.webp" width="780" alt="A red bookbinding thread runs through the blue arches of an accordion-fold paper theatre."></p>
+
 ## Retrieve evidence locally
 
 

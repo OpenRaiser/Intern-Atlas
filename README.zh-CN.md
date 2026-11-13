@@ -154,6 +154,8 @@ intern-atlas build \
 
 </details>
 
+<p align="center"><img src="assets/paper-theatre.webp" width="780" alt="一根朱红色装订线穿过手风琴折页上的蓝色拱门，最后系在一张索引卡上。"></p>
+
 ## 在本地检索证据
 
 
