@@ -4,7 +4,9 @@
 
 <p align="center">沿着论文之间的引用，追溯一个研究方法如何演变。</p>
 
-<p align="center"><strong><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@5bdcf9fbeb2adfcd1ab178ca81836dcc48f7690f/assets/workspace-tour-zh.mp4">▶ 观看 23 秒演示</a> &nbsp; / &nbsp; <a href="https://intern-atlas.opendatalab.org.cn/">浏览图谱 ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">论文</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">数据集</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API 文档</a></p>
+<p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">浏览图谱 ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">论文</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">数据集</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API 文档</a></p>
+
+<p align="center"><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@d2f2dea5388bc5be92f49049b57520c9fd880101/assets/workspace-tour-zh.mp4"><img src="assets/workspace-tour-zh-cover.png" width="900" alt="播放 23 秒演示：从 FlashAttention 追溯候选论文关系，1080p。"></a></p>
 
 ---
 
@@ -71,10 +73,6 @@ intern-atlas serve --db outputs/smoke.db --host 127.0.0.1 --port 8000
 ```
 
 保持服务运行，打开[本地工作台](http://127.0.0.1:8000/)。输入 `FlashAttention` 并点击 **Run evidence search**。结果中有两篇论文和一条连线。选中论文可以查看相邻论文，也可以将结果导出为 JSON、CSV 或 Markdown。
-
-<a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@5bdcf9fbeb2adfcd1ab178ca81836dcc48f7690f/assets/workspace-tour-zh.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour-zh.png"><img src="assets/workspace-tour-zh.gif" width="100%" alt="播放短片：搜索 FlashAttention，查看两篇论文的候选关系并导出 Markdown。"></picture></a>
-
-[观看 23 秒短片（中文版，MP4）](https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@5bdcf9fbeb2adfcd1ab178ca81836dcc48f7690f/assets/workspace-tour-zh.mp4) · [查看静态图](assets/workspace-tour-zh.png)
 
 <details>
 <summary>查看本地工作台完整截图</summary>
