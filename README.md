@@ -6,7 +6,7 @@
 
 <p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">Browse the atlas ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">Paper</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">Dataset</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API docs</a></p>
 
-<p align="center"><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@d2f2dea5388bc5be92f49049b57520c9fd880101/assets/workspace-tour.mp4"><img src="assets/workspace-tour-cover.png" width="900" alt="Play the 23-second FlashAttention paper trail in 1080p."></a></p>
+<p align="center"><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@d2f2dea5388bc5be92f49049b57520c9fd880101/assets/workspace-tour.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour-cover.png"><img src="assets/workspace-tour.gif" width="900" alt="Follow FlashAttention through the paper index, inspect a candidate link, and export Markdown."></picture></a><br><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@d2f2dea5388bc5be92f49049b57520c9fd880101/assets/workspace-tour.mp4">Watch with sound · 1080p · 23 seconds</a></p>
 
 ---
 
