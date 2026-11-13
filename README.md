@@ -1,5 +1,7 @@
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg"><img src="assets/logo.svg" width="350" alt="Intern Atlas"></picture></p>
 
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+
 <p align="center">A graph of research methods and the papers that connect them.</p>
 
 <p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">Browse the atlas ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">Paper</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">Dataset</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API docs</a></p>
@@ -69,6 +71,10 @@ intern-atlas serve --db outputs/smoke.db --host 127.0.0.1 --port 8000
 ```
 
 Keep the server running and open [the local workspace](http://127.0.0.1:8000/). Enter `FlashAttention` and select **Run evidence search**. The sample returns two papers connected by one edge. Select a paper to inspect its neighborhood, or export the result as JSON, CSV or Markdown.
+
+<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour.png"><img src="assets/workspace-tour.gif" width="100%" alt="Search for FlashAttention, inspect its candidate edge and download the research context."></picture>
+
+[Watch the 12-second tour (English captions, MP4)](assets/workspace-tour.mp4) · [View still](assets/workspace-tour.png)
 
 <details>
 <summary>Preview the local workspace with the sample graph</summary>
@@ -291,6 +297,8 @@ At a method with several eligible neighbors, SGT-MCTS balances promising routes 
 `selection score = UCT + 0.5 × edge confidence × temporal coherence`
 
 For example, take two hypothetical edges with confidence 0.8 and the same UCT score. A two-year gap contributes **0.40** to selection. A five-year gap contributes **0.32**. The preference can change which branch gets explored first. Because the time prior was calibrated on post-2015 AI work, a field with longer research cycles could warrant different weights. [Selection rule](https://arxiv.org/html/2604.28158v2#S3.SS3.SSS1) · [Parameters](https://arxiv.org/html/2604.28158v2#A2)
+
+![With equal confidence and UCT scores, a two-year gap adds 0.40 and a five-year gap adds 0.32.](assets/branch-choice.png)
 
 SGT-MCTS runs 200 iterations per seed in each direction. It joins backward and forward paths and ranks them by length, mean edge confidence and visit count. To explore another route at a fork, it masks edges already covered and searches again with half the budget. [Search procedure](https://arxiv.org/html/2604.28158v2#A2)
 
