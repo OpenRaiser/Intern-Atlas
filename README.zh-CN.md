@@ -10,13 +10,11 @@
 
 ---
 
-[运行本地示例](#运行本地示例) · [了解研究图谱](#研究图谱的工作原理) · [查询在线图谱](#查询在线图谱)
+[快速开始](#快速开始) · [了解研究图谱](#研究图谱的工作原理) · [查询在线图谱](#查询在线图谱)
 
-## 运行本地示例
+## 快速开始
 
-<p align="center"><a href="examples/papers.txt"><img src="assets/catalogue-zh.webp" width="780" alt="索引抽屉里的三篇示例论文：Attention Is All You Need（2017）、LoRA（2021）、FlashAttention（2022）。"></a></p>
-
-使用 Python 3.10 或更高版本。macOS 和 Linux 用户可在 Bash 中运行以下命令。
+**安装。** 需要 Python 3.10 或更高版本。macOS 和 Linux 用户在 Bash 中运行：
 
 ```bash
 git clone https://github.com/OpenRaiser/Intern-Atlas.git
@@ -40,7 +38,7 @@ python -m venv .venv
 
 </details>
 
-从一个全新的 `outputs/smoke.db` 开始，用[三篇示例摘要](examples/papers.txt)构建 SQLite 图谱。`--no-llm` 让构建器在本地按规则抽取，无需模型密钥。
+**建图。** 用仓库里的[三篇摘要](examples/papers.txt)创建本地数据库。首次运行时，使用一个尚不存在的 `outputs/smoke.db`。`--no-llm` 使用本地规则，无需 API 密钥。
 
 ```bash
 intern-atlas build --input examples/papers.txt --out outputs/smoke.db --json outputs/smoke.json --no-llm
@@ -63,6 +61,8 @@ python -c "import json; g=json.load(open('outputs/smoke.json', encoding='utf-8')
 大写词匹配规则也把会议名 `ICLR` 当作方法收了进来。候选关系按方法名、标题和摘要中的词汇重合程度计分，代入 `min(0.65, 0.35 + score / 20)` 得到 **0.61**。在这个例子里，瓶颈和机制两个字段填入的是规则预设的文字。[候选筛选与计分代码](https://github.com/OpenRaiser/Intern-Atlas/blob/1185dc36555c547b5b6e9553779cb498a15ce587/src/intern_atlas/builder.py#L202)
 
 </details>
+
+**启动工作台。**
 
 ```bash
 intern-atlas serve --db outputs/smoke.db --host 127.0.0.1 --port 8000
@@ -255,7 +255,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
 
 ## 研究图谱的工作原理
 
-<p align="center"><a href="https://arxiv.org/html/2604.28158v2#S3.SS2"><img src="assets/atlas-loupe-zh.webp" width="780" alt="放大镜下的研究图谱：1,030,314 篇论文、8,155 种规范化方法和 9,410,201 条带类型的边。"></a></p>
+<p align="center"><a href="https://arxiv.org/abs/1512.03385"><img src="assets/resnet-excerpt-zh.svg" width="850" alt="ResNet 摘要原文：更深的神经网络更难训练。"></a></p>
 
 ### 你正在看哪一种图？
 
@@ -276,15 +276,6 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
 3. **把判断连回原文。** 对于非背景类的候选引用，第二轮抽取瓶颈、机制与取舍，并给出置信度。验证器再核对引文片段能否在原文中找到。在作者的抽查中，生产模型对边类型的判断有 **70.4%** 正确。[抽取流程](https://arxiv.org/html/2604.28158v2#A1.SS3) · [局限性](https://arxiv.org/html/2604.28158v2#A6)
 
 **组件复用。** 如果方法 B 使用模块 A，方法图中会以 `component_of` 记录 A → B。`compares` 类型的引用也可用于检索。[投影规则，表 6](https://arxiv.org/html/2604.28158v2#A1.T6)
-
-<details>
-<summary>看一段摘要如何标出瓶颈和机制</summary>
-
-![ResNet 摘要节译，标出深层网络的训练难点以及学习残差映射的解法](assets/evidence-zh.svg)
-
-ResNet 的作者在摘要中指出，更深的网络更难训练，并提出学习残差映射。图中分别标注了这两部分。[ResNet 摘要原文](https://arxiv.org/abs/1512.03385)
-
-</details>
 
 ### 遇到分叉时，搜索走哪条路？
 

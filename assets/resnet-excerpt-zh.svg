@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="940" height="264" viewBox="0 0 940 264" role="img">
+<title>ResNet · Deep Residual Learning for Image Recognition</title>
+<defs><clipPath id="lens"><circle cx="595" cy="144" r="78"/></clipPath>
+<g id="quote" font-family="Georgia, Times New Roman, serif" font-size="34" fill="#203147">
+<text x="42" y="127">Deeper neural networks are</text>
+<text x="42" y="177">more difficult to train.</text>
+</g></defs>
+<rect width="940" height="264" fill="white"/>
+<text x="42" y="42" font-family="Arial, Microsoft YaHei, sans-serif" font-size="18" fill="#536174">ResNet · 摘要原文</text>
+<path d="M42 59H896" stroke="#d6dce1"/>
+<use xlink:href="#quote"/>
+<path d="M42 186Q175 188 328 185" fill="none" stroke="#b9503b" stroke-width="2"/>
+<text x="42" y="229" font-size="20" font-family="Georgia, Microsoft YaHei, serif" fill="#536174">更深的神经网络更难训练。</text>
+<g transform="translate(108,0)">
+<path d="M649 198l52 39" stroke="#344659" stroke-width="12" stroke-linecap="round"/>
+<circle cx="595" cy="144" r="80" fill="#fff" stroke="#344659" stroke-width="4"/>
+<g clip-path="url(#lens)"><use xlink:href="#quote" transform="translate(148,-76) scale(1.35)"/>
+<path d="M205 176Q385 178 650 174" fill="none" stroke="#b9503b" stroke-width="3"/></g></g>
+</svg>

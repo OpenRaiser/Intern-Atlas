@@ -10,13 +10,11 @@
 
 ---
 
-[Run the local sample](#run-the-sample) · [Read the research guide](#how-the-research-graph-works) · [Query the hosted graph](#query-the-hosted-graph)
+[Quick start](#quick-start) · [Read the research guide](#how-the-research-graph-works) · [Query the hosted graph](#query-the-hosted-graph)
 
-## Run the sample
+## Quick start
 
-<p align="center"><a href="examples/papers.txt"><img src="assets/catalogue.webp" width="780" alt="The sample drawer contains Attention Is All You Need (2017), LoRA (2021) and FlashAttention (2022)."></a></p>
-
-Install with Python 3.10 or later. For macOS or Linux, run the following in Bash.
+**Install.** Use Python 3.10 or later. On macOS or Linux, run these commands in Bash.
 
 ```bash
 git clone https://github.com/OpenRaiser/Intern-Atlas.git
@@ -40,7 +38,7 @@ From the repository root in this PowerShell session, replace the CLI executable 
 
 </details>
 
-Starting with a new `outputs/smoke.db`, build a SQLite graph from the [sample abstracts](examples/papers.txt). The `--no-llm` flag selects the offline heuristic extractor.
+**Build the graph.** Start with a fresh `outputs/smoke.db` and the [three sample abstracts](examples/papers.txt). The `--no-llm` option uses local rules and needs no API key.
 
 ```bash
 intern-atlas build --input examples/papers.txt --out outputs/smoke.db --json outputs/smoke.json --no-llm
@@ -63,6 +61,8 @@ python -c "import json; g=json.load(open('outputs/smoke.json', encoding='utf-8')
 The uppercase-name rule also picks up the conference name `ICLR`. The candidate edge scores **0.61** from overlap in method names, titles and abstracts, using `min(0.65, 0.35 + score / 20)`. The heuristic supplies fixed text for the bottleneck and mechanism fields. [Candidate selection and scoring](https://github.com/OpenRaiser/Intern-Atlas/blob/1185dc36555c547b5b6e9553779cb498a15ce587/src/intern_atlas/builder.py#L202)
 
 </details>
+
+**Start the workspace.**
 
 ```bash
 intern-atlas serve --db outputs/smoke.db --host 127.0.0.1 --port 8000
@@ -255,7 +255,7 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
 
 ## How the research graph works
 
-<p align="center"><a href="https://arxiv.org/html/2604.28158v2#S3.SS2"><img src="assets/atlas-loupe.webp" width="780" alt="The published atlas under a loupe: 1,030,314 papers, 8,155 canonical methods and 9,410,201 typed edges."></a></p>
+<p align="center"><a href="https://arxiv.org/abs/1512.03385"><img src="assets/resnet-excerpt.svg" width="850" alt="The ResNet abstract opens with “Deeper neural networks are more difficult to train.”"></a></p>
 
 ### Which graph are you inspecting?
 
@@ -276,15 +276,6 @@ When a paper cites an older architecture as a baseline, Intern Atlas labels the 
 3. **Attach the evidence.** For each non-background candidate, a second pass extracts the bottleneck, mechanism and trade-off, along with a confidence score. A validator checks the quoted spans against the citing text. In the authors’ audit, the production model assigned the correct edge type in **70.4%** of cases. [Extraction protocol](https://arxiv.org/html/2604.28158v2#A1.SS3) · [Limitations](https://arxiv.org/html/2604.28158v2#A6)
 
 **Component reuse.** If method B uses module A, the method graph stores A → B as `component_of`. Citations labeled `compares` remain available for retrieval. [Projection rules, Table 6](https://arxiv.org/html/2604.28158v2#A1.T6)
-
-<details>
-<summary>Read an example passage as an evidence record</summary>
-
-![A sentence about training deeper networks from the ResNet paper, alongside a bottleneck and mechanism annotation](assets/evidence.svg)
-
-In the ResNet abstract, the authors identify the difficulty of training deeper networks and propose learning a residual mapping. The illustration annotates those two parts of the abstract. [ResNet abstract](https://arxiv.org/abs/1512.03385)
-
-</details>
 
 ### How a branch gets selected
 
