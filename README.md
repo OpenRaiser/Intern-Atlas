@@ -10,15 +10,11 @@
 
 ---
 
-**Start from ConvNeXt V2. Can you trace it back to VGG?** Three searches start from the same method. Beam search reaches ResNet via Highway Networks and recovers ResNeXt, ConvNeXt and ConvNeXt V2. Its path omits VGG. Random walk finds ResNet and misses ResNeXt. SGT-MCTS recovers all five reference methods in order. [ConvNet case study, Table 8](https://arxiv.org/html/2604.28158v2#A5.T8)
-
-<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-comparison.png"><img src="assets/search-comparison.gif" width="100%" alt="Reference methods recovered in the ConvNeXt V2 case: SGT-MCTS five of five, beam search four, random walk three. Extra results are omitted."></picture>
-
-Each blue mark is a match to one of the five reference methods. The SGT-MCTS path also includes Caffe before VGG and a downstream recognition paper after ConvNeXt V2.
-
 [Run the local sample](#run-the-sample) · [Read the research guide](#how-the-research-graph-works) · [Query the hosted graph](#query-the-hosted-graph)
 
 ## Run the sample
+
+<p align="center"><a href="examples/papers.txt"><img src="assets/catalogue.webp" width="780" alt="The sample drawer contains Attention Is All You Need (2017), LoRA (2021) and FlashAttention (2022)."></a></p>
 
 Install with Python 3.10 or later. For macOS or Linux, run the following in Bash.
 
@@ -259,6 +255,8 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
 
 ## How the research graph works
 
+<p align="center"><a href="https://arxiv.org/html/2604.28158v2#S3.SS2"><img src="assets/atlas-loupe.webp" width="780" alt="The published atlas under a loupe: 1,030,314 papers, 8,155 canonical methods and 9,410,201 typed edges."></a></p>
+
 ### Which graph are you inspecting?
 
 | Object | Where a link comes from | How to interpret it |
@@ -299,6 +297,14 @@ For example, take two hypothetical edges with confidence 0.8 and the same UCT sc
 ![With equal confidence and UCT scores, a two-year gap adds 0.40 and a five-year gap adds 0.32.](assets/branch-choice.png)
 
 SGT-MCTS runs 200 iterations per seed in each direction. It joins backward and forward paths and ranks them by length, mean edge confidence and visit count. To explore another route at a fork, it masks edges already covered and searches again with half the budget. [Search procedure](https://arxiv.org/html/2604.28158v2#A2)
+
+### Case study: from ConvNeXt V2 to VGG
+
+**Start from ConvNeXt V2. Can you trace it back to VGG?** Three searches start from the same method. Beam search reaches ResNet via Highway Networks and recovers ResNeXt, ConvNeXt and ConvNeXt V2. Its path omits VGG. Random walk finds ResNet and misses ResNeXt. SGT-MCTS recovers all five reference methods in order. [ConvNet case study, Table 8](https://arxiv.org/html/2604.28158v2#A5.T8)
+
+<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-comparison.png"><img src="assets/search-comparison.gif" width="100%" alt="Reference methods recovered in the ConvNeXt V2 case: SGT-MCTS five of five, beam search four, random walk three. Extra results are omitted."></picture>
+
+Each blue mark is a match to one of the five reference methods. The SGT-MCTS path also includes Caffe before VGG and a downstream recognition paper after ConvNeXt V2.
 
 ### What the benchmark measures
 

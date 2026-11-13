@@ -10,15 +10,11 @@
 
 ---
 
-**从 ConvNeXt V2 出发，能一路追溯到 VGG 吗？** 论文用三种算法从同一起点搜索。束搜索经过 Highway Networks 到达 ResNet，也找到了 ResNeXt、ConvNeXt 和 ConvNeXt V2，唯独漏掉 VGG。随机游走找到了 ResNet，却跳过了 ResNeXt。SGT-MCTS 按参考顺序找全了五种方法。[卷积网络案例，表 8](https://arxiv.org/html/2604.28158v2#A5.T8)
-
-<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-comparison-zh.png"><img src="assets/search-comparison-zh.gif" width="100%" alt="从 ConvNeXt V2 回溯，SGT-MCTS 找到了五种参考方法，束搜索找到四种，随机游走找到三种。"></picture>
-
-每个蓝色标记代表一种命中的参考方法。SGT-MCTS 的完整路径还包括 VGG 之前的 Caffe，以及 ConvNeXt V2 之后的一篇下游识别任务论文。
-
 [运行本地示例](#运行本地示例) · [了解研究图谱](#研究图谱的工作原理) · [查询在线图谱](#查询在线图谱)
 
 ## 运行本地示例
+
+<p align="center"><a href="examples/papers.txt"><img src="assets/catalogue-zh.webp" width="780" alt="索引抽屉里的三篇示例论文：Attention Is All You Need（2017）、LoRA（2021）、FlashAttention（2022）。"></a></p>
 
 使用 Python 3.10 或更高版本。macOS 和 Linux 用户可在 Bash 中运行以下命令。
 
@@ -259,6 +255,8 @@ curl -X POST "http://127.0.0.1:8000/api/v1/remote/evidence/context" \
 
 ## 研究图谱的工作原理
 
+<p align="center"><a href="https://arxiv.org/html/2604.28158v2#S3.SS2"><img src="assets/atlas-loupe-zh.webp" width="780" alt="放大镜下的研究图谱：1,030,314 篇论文、8,155 种规范化方法和 9,410,201 条带类型的边。"></a></p>
+
 ### 你正在看哪一种图？
 
 | 图谱来源 | 关系如何生成 | 怎样阅读结果 |
@@ -299,6 +297,14 @@ ResNet 的作者在摘要中指出，更深的网络更难训练，并提出学�
 ![在边置信度和 UCT 分数相同的条件下，两年间隔和五年间隔分别给选择分数增加 0.40 和 0.32。](assets/branch-choice-zh.png)
 
 SGT-MCTS 从每个种子节点分别向前、向后各迭代 200 次，再将两个方向的路径拼接起来，按路径长度、平均边置信度和访问次数排序。为了探索分叉处的其他路线，它会屏蔽已经覆盖的边，以一半的预算再次搜索。[搜索过程](https://arxiv.org/html/2604.28158v2#A2)
+
+### 案例：从 ConvNeXt V2 到 VGG
+
+**从 ConvNeXt V2 出发，能一路追溯到 VGG 吗？** 论文用三种算法从同一起点搜索。束搜索经过 Highway Networks 到达 ResNet，也找到了 ResNeXt、ConvNeXt 和 ConvNeXt V2，唯独漏掉 VGG。随机游走找到了 ResNet，却跳过了 ResNeXt。SGT-MCTS 按参考顺序找全了五种方法。[卷积网络案例，表 8](https://arxiv.org/html/2604.28158v2#A5.T8)
+
+<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-comparison-zh.png"><img src="assets/search-comparison-zh.gif" width="100%" alt="从 ConvNeXt V2 回溯，SGT-MCTS 找到了五种参考方法，束搜索找到四种，随机游走找到三种。"></picture>
+
+每个蓝色标记代表一种命中的参考方法。SGT-MCTS 的完整路径还包括 VGG 之前的 Caffe，以及 ConvNeXt V2 之后的一篇下游识别任务论文。
 
 ### 基准评测衡量什么？
 
