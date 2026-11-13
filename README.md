@@ -6,7 +6,7 @@
 
 <p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">Browse the atlas ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">Paper</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">Dataset</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API docs</a></p>
 
-<p align="center"><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@e228010e7dbec1b7bf5fc078abbaf4b0afbe7f23/assets/workspace-tour.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour-cover.png"><img src="assets/workspace-tour.gif" width="900" alt="Follow FlashAttention through the paper index, inspect a candidate link, and export Markdown."></picture></a><br><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@e228010e7dbec1b7bf5fc078abbaf4b0afbe7f23/assets/workspace-tour.mp4">Watch with sound · 1080p · 23 seconds</a></p>
+<p align="center"><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@4d7d8bd04cb0783754046bec0e1e3392af55b9e6/assets/workspace-tour.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour-cover.png"><img src="assets/workspace-tour.webp" width="900" alt="Follow FlashAttention through the paper index, inspect a candidate link, and export Markdown."></picture></a><br><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@4d7d8bd04cb0783754046bec0e1e3392af55b9e6/assets/workspace-tour.mp4">Watch with sound · 1080p · 23 seconds</a></p>
 
 ---
 
