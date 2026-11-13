@@ -38,9 +38,9 @@ python -m venv .venv
 
 </details>
 
-<p align="center"><a href="examples/papers.txt"><img src="assets/paper-drawer.webp" width="260" alt="一个拉开的索引抽屉，露出三张论文卡片。"></a></p>
-
 **建图。** 用仓库里的[三篇摘要](examples/papers.txt)创建本地数据库。首次运行时，使用一个尚不存在的 `outputs/smoke.db`。`--no-llm` 使用本地规则，无需 API 密钥。
+
+<p align="center"><a href="examples/papers.txt"><picture><source media="(max-width: 600px)" srcset="assets/sample-index-zh-mobile.webp"><img src="assets/sample-index-zh.webp" width="800" alt="示例摘要：2017 年的 Attention Is All You Need、2021 年的 LoRA 和 2022 年的 FlashAttention。"></picture></a></p>
 
 ```bash
 intern-atlas build --input examples/papers.txt --out outputs/smoke.db --json outputs/smoke.json --no-llm

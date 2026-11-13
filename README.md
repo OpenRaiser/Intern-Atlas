@@ -38,9 +38,9 @@ From the repository root in this PowerShell session, replace the CLI executable 
 
 </details>
 
-<p align="center"><a href="examples/papers.txt"><img src="assets/paper-drawer.webp" width="260" alt="An open card catalogue drawer with three paper dividers."></a></p>
-
 **Build the graph.** Start with a fresh `outputs/smoke.db` and the [three sample abstracts](examples/papers.txt). The `--no-llm` option uses local rules and needs no API key.
+
+<p align="center"><a href="examples/papers.txt"><picture><source media="(max-width: 600px)" srcset="assets/sample-index-mobile.webp"><img src="assets/sample-index.webp" width="800" alt="Sample abstracts: Attention Is All You Need (2017), LoRA (2021), and FlashAttention (2022)."></picture></a></p>
 
 ```bash
 intern-atlas build --input examples/papers.txt --out outputs/smoke.db --json outputs/smoke.json --no-llm
