@@ -4,7 +4,7 @@
 
 <p align="center">A graph of research methods and the papers that connect them.</p>
 
-<p align="center"><strong><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@0655a96fd15e1f35868e0b9c94a9b16117dc91e5/assets/workspace-tour.mp4">▶ Watch the 12-second demo</a> &nbsp; / &nbsp; <a href="https://intern-atlas.opendatalab.org.cn/">Browse the atlas ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">Paper</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">Dataset</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API docs</a></p>
+<p align="center"><strong><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@5bdcf9fbeb2adfcd1ab178ca81836dcc48f7690f/assets/workspace-tour.mp4">▶ Watch the 23-second demo</a> &nbsp; / &nbsp; <a href="https://intern-atlas.opendatalab.org.cn/">Browse the atlas ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">Paper</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">Dataset</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API docs</a></p>
 
 ---
 
@@ -72,9 +72,9 @@ intern-atlas serve --db outputs/smoke.db --host 127.0.0.1 --port 8000
 
 Keep the server running and open [the local workspace](http://127.0.0.1:8000/). Enter `FlashAttention` and select **Run evidence search**. The sample returns two papers connected by one edge. Select a paper to inspect its neighborhood, or export the result as JSON, CSV or Markdown.
 
-<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour.png"><img src="assets/workspace-tour.gif" width="100%" alt="Search for FlashAttention, inspect its candidate edge and download the research context."></picture>
+<a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@5bdcf9fbeb2adfcd1ab178ca81836dcc48f7690f/assets/workspace-tour.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour.png"><img src="assets/workspace-tour.gif" width="100%" alt="Play the film: search for FlashAttention, follow the candidate link between two papers, and export Markdown."></picture></a>
 
-[Watch the 12-second tour (English captions, MP4)](https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@0655a96fd15e1f35868e0b9c94a9b16117dc91e5/assets/workspace-tour.mp4) · [View still](assets/workspace-tour.png)
+[Watch the 23-second tour (English, MP4)](https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@5bdcf9fbeb2adfcd1ab178ca81836dcc48f7690f/assets/workspace-tour.mp4) · [View still](assets/workspace-tour.png)
 
 <details>
 <summary>Preview the local workspace with the sample graph</summary>
