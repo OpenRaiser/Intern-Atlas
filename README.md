@@ -295,7 +295,7 @@ SGT-MCTS runs 200 iterations per seed in each direction. It joins backward and f
 
 **Start from ConvNeXt V2. Can you trace it back to VGG?** Three searches start from the same method. Beam search reaches ResNet via Highway Networks and recovers ResNeXt, ConvNeXt and ConvNeXt V2. Its path omits VGG. Random walk finds ResNet and misses ResNeXt. SGT-MCTS recovers all five reference methods in order. [ConvNet case study, Table 8](https://arxiv.org/html/2604.28158v2#A5.T8)
 
-<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-comparison.png"><img src="assets/search-comparison.gif" width="100%" alt="Reference methods recovered in the ConvNeXt V2 case: SGT-MCTS five of five, beam search four, random walk three. Extra results are omitted."></picture>
+<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-scorecard.png"><img src="assets/search-scorecard.webp" width="100%" alt="Reference methods recovered in the ConvNeXt V2 case: SGT-MCTS five of five, beam search four, random walk three. Extra results are omitted."></picture>
 
 Each blue mark is a match to one of the five reference methods. The SGT-MCTS path also includes Caffe before VGG and a downstream recognition paper after ConvNeXt V2.
 
@@ -328,4 +328,4 @@ To explore a lineage, try the [hosted chain and evidence queries](#query-the-hos
 
 The toolkit is distributed under the [MIT License](LICENSE).
 
-<p align="right"><img src="assets/one-more-paper.webp" width="220" alt="The ant carries away a scrap of paper."></p>
+<p align="right"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/one-more-paper.webp"><img src="assets/paper-ant-walk.webp" width="390" alt="An ant carries a note across the margin."></picture></p>

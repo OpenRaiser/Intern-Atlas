@@ -295,7 +295,7 @@ SGT-MCTS 从每个种子节点分别向前、向后各迭代 200 次，再将两
 
 **从 ConvNeXt V2 出发，能一路追溯到 VGG 吗？** 论文用三种算法从同一起点搜索。束搜索经过 Highway Networks 到达 ResNet，也找到了 ResNeXt、ConvNeXt 和 ConvNeXt V2，唯独漏掉 VGG。随机游走找到了 ResNet，却跳过了 ResNeXt。SGT-MCTS 按参考顺序找全了五种方法。[卷积网络案例，表 8](https://arxiv.org/html/2604.28158v2#A5.T8)
 
-<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-comparison-zh.png"><img src="assets/search-comparison-zh.gif" width="100%" alt="从 ConvNeXt V2 回溯，SGT-MCTS 找到了五种参考方法，束搜索找到四种，随机游走找到三种。"></picture>
+<picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/search-scorecard-zh.png"><img src="assets/search-scorecard-zh.webp" width="100%" alt="从 ConvNeXt V2 回溯，SGT-MCTS 找到了五种参考方法，束搜索找到四种，随机游走找到三种。"></picture>
 
 每个蓝色标记代表一种命中的参考方法。SGT-MCTS 的完整路径还包括 VGG 之前的 Caffe，以及 ConvNeXt V2 之后的一篇下游识别任务论文。
 
@@ -328,4 +328,4 @@ SGT-MCTS 从每个种子节点分别向前、向后各迭代 200 次，再将两
 
 本工具包采用 [MIT 许可证](LICENSE)。
 
-<p align="right"><img src="assets/one-more-paper.webp" width="220" alt="蚂蚁扛着一小片笔记离开。"></p>
+<p align="right"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/one-more-paper.webp"><img src="assets/paper-ant-walk.webp" width="390" alt="蚂蚁扛着笔记，沿页边走过。"></picture></p>
