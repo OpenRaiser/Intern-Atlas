@@ -38,6 +38,8 @@ From the repository root in this PowerShell session, replace the CLI executable 
 
 </details>
 
+<p align="center"><a href="examples/papers.txt"><img src="assets/paper-drawer.webp" width="260" alt="An open card catalogue drawer with three paper dividers."></a></p>
+
 **Build the graph.** Start with a fresh `outputs/smoke.db` and the [three sample abstracts](examples/papers.txt). The `--no-llm` option uses local rules and needs no API key.
 
 ```bash

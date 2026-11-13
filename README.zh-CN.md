@@ -38,6 +38,8 @@ python -m venv .venv
 
 </details>
 
+<p align="center"><a href="examples/papers.txt"><img src="assets/paper-drawer.webp" width="260" alt="一个拉开的索引抽屉，露出三张论文卡片。"></a></p>
+
 **建图。** 用仓库里的[三篇摘要](examples/papers.txt)创建本地数据库。首次运行时，使用一个尚不存在的 `outputs/smoke.db`。`--no-llm` 使用本地规则，无需 API 密钥。
 
 ```bash
