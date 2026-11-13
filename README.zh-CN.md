@@ -2,7 +2,7 @@
 
 <p align="center"><a href="README.md">English</a> · <strong>简体中文</strong></p>
 
-<p align="center">沿着论文之间的引用，追溯一个研究方法如何演变。</p>
+<p align="center">从一个研究方法出发，沿着论文追溯它的演变。</p>
 
 <p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">浏览图谱 ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">论文</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">数据集</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API 文档</a></p>
 
@@ -10,7 +10,12 @@
 
 ---
 
-[快速开始](#快速开始) · [了解研究图谱](#研究图谱的工作原理) · [查询在线图谱](#查询在线图谱)
+| 你想做什么 | 可以看到什么 |
+| --- | --- |
+| <img src="assets/index-lineage.svg" alt="" width="22"> &nbsp;[追溯一个方法的来路](#案例从-convnext-v2-到-vgg) | 三种搜索方法，哪一种能从 ConvNeXt V2 找回 VGG？ |
+| <img src="assets/index-sample.svg" alt="" width="22"> &nbsp;[试试仓库里的三篇摘要](#快速开始) | 在本地建图，查看那条候选关系。无需 API 密钥。 |
+| <img src="assets/index-papers.svg" alt="" width="22"> &nbsp;[用自己的论文建图](#用自己的论文建图) | 从 PDF 或标题与摘要列表生成 SQLite 图数据库。 |
+| <img src="assets/index-lookup.svg" alt="" width="22"> &nbsp;[查询公共图谱](#查询在线图谱) | 用命令行查找 FlashAttention，或检索一条方法演变路径。 |
 
 ## 快速开始
 

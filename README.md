@@ -2,7 +2,7 @@
 
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 
-<p align="center">A graph of research methods and the papers that connect them.</p>
+<p align="center">Trace how a research method evolved through the papers that shaped it.</p>
 
 <p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">Browse the atlas ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">Paper</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">Dataset</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API docs</a></p>
 
@@ -10,7 +10,12 @@
 
 ---
 
-[Quick start](#quick-start) · [Read the research guide](#how-the-research-graph-works) · [Query the hosted graph](#query-the-hosted-graph)
+| Explore the atlas | What you’ll find |
+| --- | --- |
+| <img src="assets/index-lineage.svg" alt="" width="22"> &nbsp;[Follow a method back in time](#case-study-from-convnext-v2-to-vgg) | Which of three searches traces ConvNeXt V2 back to VGG? |
+| <img src="assets/index-sample.svg" alt="" width="22"> &nbsp;[Try the three-abstract sample](#quick-start) | Build a local graph and inspect its one candidate link. No API key needed. |
+| <img src="assets/index-papers.svg" alt="" width="22"> &nbsp;[Map your own papers](#build-from-your-own-papers) | Build a SQLite graph from PDFs or a list of titles and abstracts. |
+| <img src="assets/index-lookup.svg" alt="" width="22"> &nbsp;[Query the public graph](#query-the-hosted-graph) | Look up FlashAttention or retrieve an evolution chain with the CLI. |
 
 ## Quick start
 
