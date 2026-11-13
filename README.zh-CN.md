@@ -6,7 +6,7 @@
 
 <p align="center"><strong><a href="https://intern-atlas.opendatalab.org.cn/">浏览图谱 ↗</a></strong> &nbsp; / &nbsp; <a href="https://arxiv.org/abs/2604.28158">论文</a> &nbsp; / &nbsp; <a href="https://huggingface.co/datasets/OpenRaiser/Intern-Atlas">数据集</a> &nbsp; / &nbsp; <a href="docs/API_USAGE.md">API 文档</a></p>
 
-<p align="center"><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@d2f2dea5388bc5be92f49049b57520c9fd880101/assets/workspace-tour-zh.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour-zh-cover.png"><img src="assets/workspace-tour-zh.gif" width="900" alt="FlashAttention 的论文线索：检索、查看候选关系、导出 Markdown。"></picture></a><br><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@d2f2dea5388bc5be92f49049b57520c9fd880101/assets/workspace-tour-zh.mp4">播放 1080p 有声版（23 秒）</a></p>
+<p align="center"><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@e228010e7dbec1b7bf5fc078abbaf4b0afbe7f23/assets/workspace-tour-zh.mp4"><picture><source media="(prefers-reduced-motion: reduce)" srcset="assets/workspace-tour-zh-cover.png"><img src="assets/workspace-tour-zh.gif" width="900" alt="FlashAttention 的论文线索：检索、查看候选关系、导出 Markdown。"></picture></a><br><a href="https://cdn.jsdelivr.net/gh/OpenRaiser/Intern-Atlas@e228010e7dbec1b7bf5fc078abbaf4b0afbe7f23/assets/workspace-tour-zh.mp4">播放 1080p 有声版（23 秒）</a></p>
 
 ---
 
